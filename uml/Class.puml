@@ -1,0 +1,102 @@
+@startuml
+' 飞行物体基类
+abstract class AbstractFlyingObject {
+    # int locationX
+    # int locationY
+    # int speedX
+    # int speedY
+    # BufferedImage image
+    # boolean alive
+    + void forward()
+    + boolean crash(AbstractFlyingObject that)
+    + Rectangle getBoundingBox()
+    + BufferedImage getImage()
+    + int getWidth()
+    + int getHeight()
+    + void vanish()
+}
+
+' 飞机抽象类
+abstract class AbstractAircraft {
+    # int maxHealth
+    # int health
+    # RandomTimedTrigger shootTrigger
+    + void decreaseHp(int decrease)
+    + void increaseHp(int increase)
+    + List<BaseBullet> shoot()
+}
+
+' 子弹基类
+abstract class BaseBullet {
+    # int power
+}
+
+' 道具基类
+abstract class BaseProp {
+    + void takeEffect(HeroAircraft heroAircraft)
+}
+
+' 具体飞机类
+class HeroAircraft {
+    - int power
+    - int shootNum
+    + List<BaseBullet> shoot()
+}
+
+class MobEnemy {
+    + List<BaseBullet> shoot()
+}
+
+class EliteEnemy {
+    - int shootNum
+    - int power
+    + List<BaseBullet> shoot()
+}
+
+' 具体子弹类
+class HeroBullet
+class EnemyBullet
+
+' 具体道具类
+class HealthProp {
+    - int health
+    + void takeEffect(HeroAircraft heroAircraft)
+}
+
+class BulletProp {
+    - int numBullet
+    + void takeEffect(HeroAircraft heroAircraft)
+}
+
+class BombProp {
+    + void takeEffect(HeroAircraft heroAircraft)
+}
+
+' 继承关系
+AbstractFlyingObject <|-- AbstractAircraft
+AbstractFlyingObject <|-- BaseBullet
+AbstractFlyingObject <|-- BaseProp
+
+AbstractAircraft <|-- HeroAircraft
+AbstractAircraft <|-- MobEnemy
+AbstractAircraft <|-- EliteEnemy
+
+BaseBullet <|-- HeroBullet
+BaseBullet <|-- EnemyBullet
+
+BaseProp <|-- HealthProp
+BaseProp <|-- BulletProp
+BaseProp <|-- BombProp
+
+' 英雄机与英雄子弹关联
+HeroAircraft --> HeroBullet : creates
+
+' 精英敌机与敌机子弹关联
+EliteEnemy --> EnemyBullet : creates
+
+' 道具与英雄机关联
+HealthProp --> HeroAircraft : affects
+BulletProp --> HeroAircraft : affects
+BombProp --> HeroAircraft : affects
+
+@enduml

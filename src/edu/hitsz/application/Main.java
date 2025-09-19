@@ -1,24 +1,33 @@
 package edu.hitsz.application;
 
 import javax.swing.*;
+import java.awt.*;
 
 /**
  * 程序入口
+ *
  * @author hitsz
+ * @author fengyang
  */
 public class Main {
-
+    
+    public static final int WINDOW_WIDTH = 512;
+    public static final int WINDOW_HEIGHT = 768;
+    public static final Rectangle WINDOW_AREA = new Rectangle(0, 0, WINDOW_WIDTH, WINDOW_HEIGHT);
+    
     public static void main(String[] args) {
-        System.out.println("Hello Aircraft War");
-
-        JFrame frame = new JFrame("Aircraft War");
         Game game = new Game();
+        game.setFocusable(true);
+        game.setPreferredSize(new Dimension(WINDOW_WIDTH, WINDOW_HEIGHT));
+        
+        JFrame frame = new JFrame("Aircraft War");
         frame.add(game);
-        frame.setSize(Game.WINDOW_WIDTH, Game.WINDOW_HEIGHT);
-        // 固定窗口尺寸
+        frame.pack();
         frame.setResizable(false);
-        frame.setVisible(true);
+        frame.setLocationRelativeTo(null);
         frame.setDefaultCloseOperation(JFrame.EXIT_ON_CLOSE);
-        game.action();
+        
+        frame.setVisible(true);
+        game.start();
     }
 }

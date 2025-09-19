@@ -1,293 +1,356 @@
 package edu.hitsz.application;
 
-import edu.hitsz.aircraft.*;
-import edu.hitsz.bullet.Bullet;
-import edu.hitsz.bullet.HeroBullet;
-import edu.hitsz.basic.FlyingObject;
+import edu.hitsz.aircraft.AbstractAircraft;
+import edu.hitsz.aircraft.EliteEnemy;
+import edu.hitsz.aircraft.HeroAircraft;
+import edu.hitsz.aircraft.MobEnemy;
+import edu.hitsz.basic.AbstractFlyingObject;
+import edu.hitsz.bullet.BaseBullet;
+import edu.hitsz.prop.BaseProp;
+import edu.hitsz.prop.BombProp;
+import edu.hitsz.prop.BulletProp;
+import edu.hitsz.prop.HealthProp;
+import edu.hitsz.util.RandomTimedTrigger;
+import lombok.Getter;
+import pers.hpcx.util.Random;
+import pers.hpcx.visual.NineGrid;
+import pers.hpcx.visual.PaintUtils;
 
-import javax.imageio.ImageIO;
 import javax.swing.*;
 import java.awt.*;
+import java.awt.event.ActionEvent;
+import java.awt.event.ActionListener;
 import java.awt.image.BufferedImage;
-import java.io.FileInputStream;
-import java.io.IOException;
-import java.util.*;
+import java.util.LinkedList;
 import java.util.List;
-import java.util.concurrent.*;
+import java.util.function.Predicate;
 
 /**
  * 游戏主面板，游戏启动
  *
  * @author hitsz
  */
-public class Game extends JPanel {
-    public static final int WINDOW_WIDTH = 512;
-    public static final int WINDOW_HEIGHT = 768;
+@Getter public class Game extends JPanel implements ActionListener {
+    
+    // 时间间隔(ms)，控制刷新频率
+    private static final int TIME_INTERVAL = 10;
+    
+    // 定时器，定时循环游戏帧
+    private final Timer timer = new Timer(TIME_INTERVAL, this);
+    
+    // 屏幕中出现的敌机最大数量
+    private static final int MAX_ENEMY_NUMBER = 20;
+    
+    // 背景图滚动位置
     private int backGroundTop = 0;
-
-    /**
-     * 时间间隔(ms)，控制刷新频率
-     */
-    private int timeInterval = 40;
-
-    private final HeroAircraft heroAircraft;
-    private final List<AbstractAircraft> enemyAircrafts;
-    private final List<Bullet> heroBullets;
-    private final List<Bullet> enemyBullets;
-
-    private int enemyMaxNumber = 5;
-
-    private boolean gameOverFlag = false;
-    private int score = 0;
+    
+    // 当前游戏时间
     private int time = 0;
-
+    
+    // 当前得分
+    private int score = 0;
+    
+    // 游戏是否结束
+    private boolean gameOver = false;
+    
+    // 普通敌机产生定时触发器
+    private final RandomTimedTrigger modEnemySpawnDuration = new RandomTimedTrigger(500, 1000);
+    
+    // 英雄敌机产生定时触发器
+    private final RandomTimedTrigger eliteEnemySpawnDuration = new RandomTimedTrigger(6000, 10000);
+    
+    private HeroAircraft heroAircraft;
+    private HeroController heroController;
+    
+    private final List<BaseBullet> heroBullets = new LinkedList<>();
+    private final List<BaseBullet> enemyBullets = new LinkedList<>();
+    private final List<AbstractAircraft> enemyAircrafts = new LinkedList<>();
+    private final List<BaseProp> props = new LinkedList<>();
+    
     /**
-     * 周期（ms)
-     * 指示子弹的发射、敌机的产生频率
+     * 游戏启动入口
      */
-    private int cycleDuration = 600;
-    private int cycleTime = 0;
-
-
-    public Game() {
-        heroAircraft = new HeroAircraft(
-                WINDOW_WIDTH / 2,
-                WINDOW_HEIGHT - ImageManager.HERO_IMAGE.getHeight() ,
-                0, 0, 100);
-
-        enemyAircrafts = new LinkedList<>();
-        heroBullets = new LinkedList<>();
-        enemyBullets = new LinkedList<>();
-
-        //启动英雄机鼠标监听
-        new HeroController(this, heroAircraft);
-
+    public void start() {
+        // 初始化英雄机
+        heroAircraft = new HeroAircraft(0, 0, 100, new RandomTimedTrigger(100, 100), 20, 1);
+        heroAircraft.setLocationX(Main.WINDOW_WIDTH / 2);
+        heroAircraft.setLocationY(Main.WINDOW_HEIGHT - heroAircraft.getHeight());
+        
+        // 启动英雄机事件监听
+        heroController = new HeroController(this);
+        heroController.install();
+        
+        // 启动定时器
+        timer.start();
     }
-
+    
     /**
-     * 游戏启动入口，执行游戏逻辑
+     * 定时任务：绘制、对象产生、碰撞判定、击毁、道具生效及结束判定
      */
-    public void action() {
-
-
-        //Scheduled 线程池，用于定时任务调度
-        ScheduledExecutorService executorService = new ScheduledThreadPoolExecutor(1);
-
-        // 定时任务：绘制、对象产生、碰撞判定、击毁及结束判定
-        Runnable task = () -> {
-            repaint();
-
-            time += timeInterval;
-
-            // 周期性执行（控制频率）
-            if (timeCountAndNewCycleJudge()) {
-                System.out.println(time);
-                // 新敌机产生
-                if (enemyAircrafts.size() < enemyMaxNumber) {
-                    enemyAircrafts.add(new MobEnemy(
-                            (int) ( Math.random() * (Game.WINDOW_WIDTH - ImageManager.MOB_ENEMY_IMAGE.getWidth()))*1,
-                            (int) (Math.random() * Game.WINDOW_HEIGHT * 0.2)*1,
-                            0,
-                            10,
-                            30
-                    ));
-                }
-                // 飞机射出子弹
-                shootAction();
-            }
-
-            // 子弹移动
-            bulletsMoveAction();
-
-            // 飞机移动
-            aircraftsMoveAction();
-
-            // 撞击检测
-            crashCheckAction();
-
-            // 后处理
-            postProcessAction();
-
-            // 游戏结束检查
-            if (heroAircraft.getHp() <= 0) {
-                // 游戏结束
-                executorService.shutdown();
-            }
-
-        };
-
-        /**
-         * 以固定延迟时间进行执行
-         * 本次任务执行完成后，需要延迟设定的延迟时间，才会执行新的任务
-         */
-        executorService.scheduleWithFixedDelay(task, timeInterval, timeInterval, TimeUnit.MILLISECONDS);
-
+    public void actionPerformed(ActionEvent e) {
+        // 计时
+        time += TIME_INTERVAL;
+        
+        // 新敌机产生
+        spawnEnemy();
+        
+        // 飞机射出子弹
+        shoot();
+        
+        // 英雄机、敌机、子弹移动
+        moveObjects();
+        
+        // 撞击检测
+        checkCrash();
+        
+        // 道具生效
+        propTakesEffect();
+        
+        // 后处理
+        removeInvalidObjects();
+        
+        // 检查英雄机是否存活
+        if (!heroAircraft.isAlive()) {
+            // 游戏结束
+            gameOver = true;
+            timer.stop();
+        }
+        
+        //每个时刻重绘界面
+        repaint();
     }
-
+    
     //***********************
     //      Action 各部分
     //***********************
-
-    private boolean timeCountAndNewCycleJudge() {
-        cycleTime += timeInterval;
-        if (cycleTime >= cycleDuration && cycleTime - timeInterval < cycleTime) {
-            // 跨越到新的周期
-            cycleTime %= cycleDuration;
-            return true;
-        } else {
-            return false;
-        }
-    }
-
-    private void shootAction() {
-        // TODO 敌机射击
-
-        // 英雄射击
-        heroBullets.addAll(heroAircraft.shoot());
-    }
-
-    private void bulletsMoveAction() {
-        for (Bullet bullet : heroBullets) {
-            bullet.forward();
-        }
-        for (Bullet bullet : enemyBullets) {
-            bullet.forward();
-        }
-    }
-
-    private void aircraftsMoveAction() {
-        for (AbstractAircraft enemyAircraft : enemyAircrafts) {
-            enemyAircraft.forward();
-        }
-    }
-
-
+    
     /**
-     * 碰撞检测：
-     * 1. 敌机攻击英雄
-     * 2. 英雄攻击/撞击敌机
-     * 3. 英雄获得补给
+     * 生成敌机
      */
-    private void crashCheckAction() {
-        // TODO 敌机子弹攻击英雄
-
-
-        // 英雄子弹攻击敌机
-        for (Bullet bullet : heroBullets) {
-            if (bullet.notValid()) {
-                continue;
-            }
-            for (AbstractAircraft enemyAircraft : enemyAircrafts) {
-                if (enemyAircraft.notValid()) {
-                    // 已被其他子弹击毁的敌机，不再检测
-                    // 避免多个子弹重复击毁同一敌机的判定
-                    continue;
-                }
-                if (enemyAircraft.crash(bullet)) {
-                    // 敌机撞击到英雄机子弹
-                    // 敌机损失一定生命值
-                    enemyAircraft.decreaseHp(bullet.power);
+    private void spawnEnemy() {
+        if (modEnemySpawnDuration.isTriggered(TIME_INTERVAL) && enemyAircrafts.size() < MAX_ENEMY_NUMBER) {
+            MobEnemy enemy = new MobEnemy(0, 0, 0, Random.getInstance().nextRange(2, 6), 100);
+            enemy.setLocationX(Random.getInstance().nextRange(enemy.getWidth() / 2, Main.WINDOW_WIDTH - enemy.getWidth() / 2));
+            enemy.setLocationY(-enemy.getHeight() / 2);
+            enemyAircrafts.add(enemy);
+        }
+        
+        if (eliteEnemySpawnDuration.isTriggered(TIME_INTERVAL) && enemyAircrafts.size() < MAX_ENEMY_NUMBER) {
+            EliteEnemy enemy = new EliteEnemy(0, 0, 0, Random.getInstance().nextRange(1, 3), 300, new RandomTimedTrigger(600, 1000));
+            enemy.setLocationX(Random.getInstance().nextRange(enemy.getWidth() / 2, Main.WINDOW_WIDTH - enemy.getWidth() / 2));
+            enemy.setLocationY(-enemy.getHeight() / 2);
+            enemyAircrafts.add(enemy);
+        }
+    }
+    
+    /**
+     * 1. 英雄射击<br>
+     * 2. 敌机射击<br>
+     */
+    private void shoot() {
+        if (heroAircraft.getShootTrigger().isTriggered(TIME_INTERVAL)) {
+            heroBullets.addAll(heroAircraft.shoot());
+        }
+        
+        enemyAircrafts.stream()
+                .filter(AbstractFlyingObject::isAlive)
+                .filter(enemyAircraft -> enemyAircraft.getShootTrigger() != null)
+                .filter(enemyAircraft -> enemyAircraft.getShootTrigger().isTriggered(TIME_INTERVAL))
+                .forEach(enemyAircraft -> enemyBullets.addAll(enemyAircraft.shoot()));
+    }
+    
+    /**
+     * 1. 英雄子弹移动<br>
+     * 2. 敌机子弹移动<br>
+     * 3. 敌机移动<br>
+     * 4. 道具移动<br>
+     */
+    private void moveObjects() {
+        heroController.move();
+        heroBullets.forEach(AbstractFlyingObject::forward);
+        enemyBullets.forEach(AbstractFlyingObject::forward);
+        enemyAircrafts.forEach(AbstractFlyingObject::forward);
+        props.forEach(AbstractFlyingObject::forward);
+    }
+    
+    /**
+     * 1. 敌机攻击英雄<br>
+     * 2. 英雄攻击/撞击敌机<br>
+     * 3. 结算奖励<br>
+     */
+    private void checkCrash() {
+        // 敌机子弹攻击英雄
+        enemyBullets.stream()
+                .filter(AbstractFlyingObject::isAlive)
+                .filter(heroAircraft::crash)
+                .forEach(bullet -> {
+                    // 英雄机撞击到敌机子弹损失一定生命值
                     bullet.vanish();
-                    if (enemyAircraft.notValid()) {
-                        // TODO 获得分数，产生道具补给
-                        score += 10;
-                    }
-                }
-                // 英雄机 与 敌机 相撞，均损毁
-                if (enemyAircraft.crash(heroAircraft) || heroAircraft.crash(enemyAircraft)) {
+                    heroAircraft.decreaseHp(bullet.getPower());
+                });
+        
+        // 英雄子弹攻击敌机
+        heroBullets.stream()
+                .filter(AbstractFlyingObject::isAlive)
+                .forEach(bullet -> enemyAircrafts.stream()
+                        .filter(AbstractFlyingObject::isAlive)
+                        .filter(bullet::crash)
+                        .forEach(enemyAircraft -> {
+                            // 敌机撞击到英雄机子弹损失一定生命值
+                            bullet.vanish();
+                            enemyAircraft.decreaseHp(bullet.getPower());
+                        }));
+        
+        // 英雄机与敌机相撞
+        enemyAircrafts.stream()
+                .filter(AbstractFlyingObject::isAlive)
+                .filter(heroAircraft::crash)
+                .forEach(enemyAircraft -> {
+                    // 英雄机撞击到敌机损失一定生命值
                     enemyAircraft.vanish();
-                    heroAircraft.decreaseHp(Integer.MAX_VALUE);
-                }
-            }
-        }
-
-        // 我方获得补给
-
+                    heroAircraft.decreaseHp(50);
+                });
+        
+        // 结算摧毁敌机奖励
+        enemyAircrafts.stream()
+                .filter(Predicate.not(AbstractFlyingObject::isAlive))
+                .filter(enemyAircraft -> enemyAircraft.getHealth() <= 0)
+                .forEach(this::onEnemyDestroy);
     }
-
+    
     /**
-     * 后处理：
-     * 1. 删除无效的子弹
-     * 2. 删除无效的敌机
-     * 3. 检查英雄机生存
-     * <p>
-     * 无效的原因可能是撞击或者飞出边界
+     * 根据敌机类型增加分数并生成道具
      */
-    private void postProcessAction() {
-        enemyBullets.removeIf(FlyingObject::notValid);
-        heroBullets.removeIf(FlyingObject::notValid);
-        enemyAircrafts.removeIf(FlyingObject::notValid);
-
-        // TODO 处理非自动触发道具
-
-        if (heroAircraft.notValid()) {
-            gameOverFlag = true;
+    private void onEnemyDestroy(AbstractAircraft enemy) {
+        switch (enemy) {
+        case MobEnemy mobEnemy -> {
+            score += 10;
         }
-
+        case EliteEnemy eliteEnemy -> {
+            score += 50;
+            spawnProp(enemy.getLocationX(), enemy.getLocationY());
+        }
+        default -> {
+        }
+        }
     }
-
-
+    
+    /**
+     * 生成道具
+     */
+    private void spawnProp(int locationX, int locationY) {
+        BaseProp prop;
+        
+        double rnd = Random.getInstance().nextDouble();
+        if (rnd < 0.50) {
+            prop = new HealthProp(0, 0, 0, 0, 100);
+        } else if (rnd < 0.80) {
+            prop = new BulletProp(0, 0, 0, 0, 1);
+        } else {
+            prop = new BombProp(0, 0, 0, 0);
+        }
+        
+        prop.setLocationX(locationX);
+        prop.setLocationY(locationY);
+        prop.setSpeedX(Random.getInstance().nextRange(-3, 3));
+        prop.setSpeedY(Random.getInstance().nextRange(1, 3));
+        props.add(prop);
+    }
+    
+    /**
+     * 道具生效
+     */
+    private void propTakesEffect() {
+        props.stream()
+                .filter(AbstractFlyingObject::isAlive)
+                .filter(heroAircraft::crash)
+                .forEach(prop -> {
+                    prop.takeEffect(heroAircraft);
+                    prop.vanish();
+                });
+    }
+    
+    /**
+     * 1. 删除无效的子弹<br>
+     * 2. 删除无效的敌机<br>
+     * 3. 删除无效的道具<br>
+     */
+    private void removeInvalidObjects() {
+        heroBullets.removeIf(Predicate.not(AbstractFlyingObject::isAlive));
+        enemyBullets.removeIf(Predicate.not(AbstractFlyingObject::isAlive));
+        enemyAircrafts.removeIf(Predicate.not(AbstractFlyingObject::isAlive));
+        props.removeIf(Predicate.not(AbstractFlyingObject::isAlive));
+    }
+    
     //***********************
     //      Paint 各部分
     //***********************
-
+    
     /**
-     * 重写paint方法
-     * 通过重复调用paint方法，实现游戏动画
-     *
-     * @param  g
+     * 游戏动画
      */
-    @Override
-    public void paint(Graphics g) {
-        super.paint(g);
-
-        // 绘制背景
-        g.drawImage(ImageManager.BACKGROUND_IMAGE, 0, 0, null);
+    @Override public void paint(Graphics g) {
+        Graphics2D g2d = (Graphics2D) g;
+        g2d.setRenderingHints(PaintUtils.RENDERING_HINTS_BEST_QUALITY);
+        
         // 绘制背景,图片滚动
-        g.drawImage(ImageManager.BACKGROUND_IMAGE, 0, this.backGroundTop - WINDOW_HEIGHT, null);
-        g.drawImage(ImageManager.BACKGROUND_IMAGE, 0, this.backGroundTop, null);
-        this.backGroundTop += 1;
-        if (this.backGroundTop == WINDOW_HEIGHT) {
-            this.backGroundTop = 0;
-        }
-
-        // 先绘制子弹，后绘制飞机
-        // 这样子弹显示在飞机的下层
-        paintImageWithPositionRevised(g, enemyBullets);
-        paintImageWithPositionRevised(g, heroBullets);
-
-        paintImageWithPositionRevised(g, enemyAircrafts);
-
-        g.drawImage(ImageManager.HERO_IMAGE, heroAircraft.getLocationX() - ImageManager.HERO_IMAGE.getWidth() / 2,
-                heroAircraft.getLocationY() - ImageManager.HERO_IMAGE.getHeight() / 2, null);
-
-        //绘制得分和生命值
-        paintScoreAndLife(g);
-
+        g2d.drawImage(ImageManager.BACKGROUND_IMAGE, 0, backGroundTop - Main.WINDOW_HEIGHT, null);
+        g2d.drawImage(ImageManager.BACKGROUND_IMAGE, 0, backGroundTop, null);
+        backGroundTop = (backGroundTop + 1) % Main.WINDOW_HEIGHT;
+        
+        // 子弹显示在飞机的下层
+        enemyBullets.forEach(obj -> drawFlyingObject(g2d, obj));
+        heroBullets.forEach(obj -> drawFlyingObject(g2d, obj));
+        enemyAircrafts.forEach(obj -> drawFlyingObject(g2d, obj));
+        props.forEach(obj -> drawFlyingObject(g2d, obj));
+        drawFlyingObject(g2d, heroAircraft);
+        
+        //绘制时间、得分和生命值
+        drawUI(g2d);
     }
-
-    private void paintImageWithPositionRevised(Graphics g, List<? extends FlyingObject> objects) {
-        if (objects.size() == 0) {
-            return;
-        }
-
-        for (FlyingObject object : objects) {
-            BufferedImage image = object.getImage();
-            assert image != null : objects.getClass().getName() + " has no image! ";
-            g.drawImage(image, object.getLocationX() - image.getWidth() / 2,
-                    object.getLocationY() - image.getHeight() / 2, null);
-        }
+    
+    private void drawFlyingObject(Graphics2D g2d, AbstractFlyingObject object) {
+        BufferedImage image = object.getImage();
+        g2d.drawImage(image, object.getLocationX() - image.getWidth() / 2, object.getLocationY() - image.getHeight() / 2, null);
     }
-
-    private void paintScoreAndLife(Graphics g) {
+    
+    private void drawUI(Graphics2D g2d) {
+        String timeText = "%02d:%02d:%02d".formatted(time / 1000 / 60, time / 1000 % 60, time % 1000 / 10);
+        String scoreText = "SCORE: " + score;
+        String healthText = "HP: " + heroAircraft.getHealth();
+        
+        g2d.setFont(new Font("SansSerif", Font.BOLD, 23));
+        
         int x = 10;
-        int y = 25;
-        g.setColor(new Color(16711680));
-        g.setFont(new Font("SansSerif", Font.BOLD, 22));
-        g.drawString("SCORE:" + this.score, x, y);
-        y = y + 20;
-        g.drawString("LIFE:" + this.heroAircraft.getHp(), x, y);
+        int y = 10;
+        drawShadowedText(g2d, timeText, x, y, 3, 3);
+        y += 30;
+        drawShadowedText(g2d, scoreText, x, y, 3, 3);
+        y += 30;
+        drawShadowedText(g2d, healthText, x, y, 3, 3);
+        
+        if (gameOver) {
+            g2d.setColor(new Color(45, 35, 35, 200));
+            g2d.fillRect(0, Main.WINDOW_HEIGHT / 3, Main.WINDOW_WIDTH, Main.WINDOW_HEIGHT / 3);
+            g2d.setFont(new Font("SansSerif", Font.BOLD, 60));
+            drawShadowedText(g2d, "GAME OVER", 0, 0, Main.WINDOW_WIDTH, Main.WINDOW_HEIGHT, 3, 6);
+        }
     }
-
-
+    
+    private static final Color TEXT_COLOR = new Color(255, 237, 204);
+    private static final Color SHADOW_COLOR = new Color(65, 51, 51);
+    
+    private void drawShadowedText(Graphics2D g2d, String text, int x, int y, int sx, int sy) {
+        g2d.setColor(SHADOW_COLOR);
+        PaintUtils.drawTextPoint(g2d, text, NineGrid.SOUTH_EAST, x - sx, y + sy);
+        g2d.setColor(TEXT_COLOR);
+        PaintUtils.drawTextPoint(g2d, text, NineGrid.SOUTH_EAST, x, y);
+    }
+    
+    private void drawShadowedText(Graphics2D g2d, String text, int x, int y, int w, int h, int sx, int sy) {
+        g2d.setColor(SHADOW_COLOR.darker());
+        PaintUtils.drawTextRectangle(g2d, text, NineGrid.CENTER, x - sx, y + sy, w, h);
+        g2d.setColor(TEXT_COLOR);
+        PaintUtils.drawTextRectangle(g2d, text, NineGrid.CENTER, x, y, w, h);
+    }
 }

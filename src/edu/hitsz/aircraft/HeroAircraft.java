@@ -1,5 +1,7 @@
 package edu.hitsz.aircraft;
 
+import edu.hitsz.application.ImageManager;
+import edu.hitsz.application.Main;
 import edu.hitsz.bullet.BaseBullet;
 import edu.hitsz.bullet.HeroBullet;
 import edu.hitsz.util.RandomTimedTrigger;
@@ -17,16 +19,40 @@ import java.util.List;
  */
 @Getter @Setter public class HeroAircraft extends AbstractAircraft {
     
+    // 懒汉式单例模式
+    private static volatile HeroAircraft INSTANCE;
+    
     // 子弹伤害
     private int power;
     
     // 子弹一次发射数量
     private int shootNum;
     
-    public HeroAircraft(int locationX, int locationY, int hp, RandomTimedTrigger shootTrigger, int power, int shootNum) {
+    private HeroAircraft(int locationX, int locationY, int hp, RandomTimedTrigger shootTrigger, int power, int shootNum) {
         super(locationX, locationY, 0, 0, hp, shootTrigger);
         this.power = power;
         this.shootNum = shootNum;
+    }
+    
+    /**
+     * 获取英雄机单例
+     *
+     * @return 英雄机实例
+     */
+    public static HeroAircraft getInstance() {
+        // 双重检查锁定
+        if (INSTANCE == null) {
+            synchronized (HeroAircraft.class) {
+                if (INSTANCE == null) {
+                    INSTANCE = new HeroAircraft(
+                            Main.WINDOW_WIDTH / 2,
+                            Main.WINDOW_HEIGHT - ImageManager.HERO_IMAGE.getHeight(),
+                            1000, new RandomTimedTrigger(100, 100), 20, 1
+                    );
+                }
+            }
+        }
+        return INSTANCE;
     }
     
     @Override public void forward() {

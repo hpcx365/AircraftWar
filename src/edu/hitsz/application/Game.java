@@ -1,15 +1,9 @@
 package edu.hitsz.application;
 
-import edu.hitsz.aircraft.AbstractAircraft;
-import edu.hitsz.aircraft.EliteEnemy;
-import edu.hitsz.aircraft.HeroAircraft;
-import edu.hitsz.aircraft.MobEnemy;
+import edu.hitsz.aircraft.*;
 import edu.hitsz.basic.AbstractFlyingObject;
 import edu.hitsz.bullet.BaseBullet;
-import edu.hitsz.prop.BaseProp;
-import edu.hitsz.prop.BombProp;
-import edu.hitsz.prop.BulletProp;
-import edu.hitsz.prop.HealthProp;
+import edu.hitsz.prop.*;
 import edu.hitsz.util.RandomTimedTrigger;
 import lombok.Getter;
 import pers.hpcx.util.Random;
@@ -59,7 +53,6 @@ import java.util.function.Predicate;
     // 英雄敌机产生定时触发器
     private final RandomTimedTrigger eliteEnemySpawnDuration = new RandomTimedTrigger(6000, 10000);
     
-    private HeroAircraft heroAircraft;
     private HeroController heroController;
     
     private final List<BaseBullet> heroBullets = new LinkedList<>();
@@ -71,14 +64,8 @@ import java.util.function.Predicate;
      * 游戏启动入口
      */
     public void start() {
-        // 初始化英雄机
-        heroAircraft = new HeroAircraft(0, 0, 100, new RandomTimedTrigger(100, 100), 20, 1);
-        heroAircraft.setLocationX(Main.WINDOW_WIDTH / 2);
-        heroAircraft.setLocationY(Main.WINDOW_HEIGHT - heroAircraft.getHeight());
-        
         // 启动英雄机事件监听
         heroController = new HeroController(this);
-        heroController.install();
         
         // 启动定时器
         timer.start();
@@ -110,7 +97,7 @@ import java.util.function.Predicate;
         removeInvalidObjects();
         
         // 检查英雄机是否存活
-        if (!heroAircraft.isAlive()) {
+        if (!HeroAircraft.getInstance().isAlive()) {
             // 游戏结束
             gameOver = true;
             timer.stop();
@@ -129,16 +116,16 @@ import java.util.function.Predicate;
      */
     private void spawnEnemy() {
         if (modEnemySpawnDuration.isTriggered(TIME_INTERVAL) && enemyAircrafts.size() < MAX_ENEMY_NUMBER) {
-            MobEnemy enemy = new MobEnemy(0, 0, 0, Random.getInstance().nextRange(2, 6), 100);
-            enemy.setLocationX(Random.getInstance().nextRange(enemy.getWidth() / 2, Main.WINDOW_WIDTH - enemy.getWidth() / 2));
-            enemy.setLocationY(-enemy.getHeight() / 2);
+            // 使用普通敌机工厂创建敌机
+            EnemyFactory factory = new MobEnemyFactory();
+            AbstractAircraft enemy = factory.createEnemy();
             enemyAircrafts.add(enemy);
         }
         
         if (eliteEnemySpawnDuration.isTriggered(TIME_INTERVAL) && enemyAircrafts.size() < MAX_ENEMY_NUMBER) {
-            EliteEnemy enemy = new EliteEnemy(0, 0, 0, Random.getInstance().nextRange(1, 3), 300, new RandomTimedTrigger(600, 1000));
-            enemy.setLocationX(Random.getInstance().nextRange(enemy.getWidth() / 2, Main.WINDOW_WIDTH - enemy.getWidth() / 2));
-            enemy.setLocationY(-enemy.getHeight() / 2);
+            // 使用精英敌机工厂创建敌机
+            EnemyFactory factory = new EliteEnemyFactory();
+            AbstractAircraft enemy = factory.createEnemy();
             enemyAircrafts.add(enemy);
         }
     }
@@ -148,8 +135,8 @@ import java.util.function.Predicate;
      * 2. 敌机射击<br>
      */
     private void shoot() {
-        if (heroAircraft.getShootTrigger().isTriggered(TIME_INTERVAL)) {
-            heroBullets.addAll(heroAircraft.shoot());
+        if (HeroAircraft.getInstance().getShootTrigger().isTriggered(TIME_INTERVAL)) {
+            heroBullets.addAll(HeroAircraft.getInstance().shoot());
         }
         
         enemyAircrafts.stream()
@@ -182,11 +169,11 @@ import java.util.function.Predicate;
         // 敌机子弹攻击英雄
         enemyBullets.stream()
                 .filter(AbstractFlyingObject::isAlive)
-                .filter(heroAircraft::crash)
+                .filter(HeroAircraft.getInstance()::crash)
                 .forEach(bullet -> {
                     // 英雄机撞击到敌机子弹损失一定生命值
                     bullet.vanish();
-                    heroAircraft.decreaseHp(bullet.getPower());
+                    HeroAircraft.getInstance().decreaseHp(bullet.getPower());
                 });
         
         // 英雄子弹攻击敌机
@@ -204,11 +191,11 @@ import java.util.function.Predicate;
         // 英雄机与敌机相撞
         enemyAircrafts.stream()
                 .filter(AbstractFlyingObject::isAlive)
-                .filter(heroAircraft::crash)
+                .filter(HeroAircraft.getInstance()::crash)
                 .forEach(enemyAircraft -> {
                     // 英雄机撞击到敌机损失一定生命值
                     enemyAircraft.vanish();
-                    heroAircraft.decreaseHp(50);
+                    HeroAircraft.getInstance().decreaseHp(50);
                 });
         
         // 结算摧毁敌机奖励
@@ -239,17 +226,22 @@ import java.util.function.Predicate;
      * 生成道具
      */
     private void spawnProp(int locationX, int locationY) {
-        BaseProp prop;
+        PropFactory propFactory;
         
+        // 随机选择道具工厂
         double rnd = Random.getInstance().nextDouble();
-        if (rnd < 0.50) {
-            prop = new HealthProp(0, 0, 0, 0, 100);
-        } else if (rnd < 0.80) {
-            prop = new BulletProp(0, 0, 0, 0, 1);
+        if (rnd < 0.30) {
+            propFactory = new HealthPropFactory();
+        } else if (rnd < 0.60) {
+            propFactory = new BulletPropFactory();
+        } else if (rnd < 0.90) {
+            propFactory = new BombPropFactory();
         } else {
-            prop = new BombProp(0, 0, 0, 0);
+            return;
         }
         
+        // 使用工厂创建道具
+        BaseProp prop = propFactory.createProp();
         prop.setLocationX(locationX);
         prop.setLocationY(locationY);
         prop.setSpeedX(Random.getInstance().nextRange(-3, 3));
@@ -263,9 +255,9 @@ import java.util.function.Predicate;
     private void propTakesEffect() {
         props.stream()
                 .filter(AbstractFlyingObject::isAlive)
-                .filter(heroAircraft::crash)
+                .filter(HeroAircraft.getInstance()::crash)
                 .forEach(prop -> {
-                    prop.takeEffect(heroAircraft);
+                    prop.takeEffect(HeroAircraft.getInstance());
                     prop.vanish();
                 });
     }
@@ -303,7 +295,7 @@ import java.util.function.Predicate;
         heroBullets.forEach(obj -> drawFlyingObject(g2d, obj));
         enemyAircrafts.forEach(obj -> drawFlyingObject(g2d, obj));
         props.forEach(obj -> drawFlyingObject(g2d, obj));
-        drawFlyingObject(g2d, heroAircraft);
+        drawFlyingObject(g2d, HeroAircraft.getInstance());
         
         //绘制时间、得分和生命值
         drawUI(g2d);
@@ -317,7 +309,7 @@ import java.util.function.Predicate;
     private void drawUI(Graphics2D g2d) {
         String timeText = "%02d:%02d:%02d".formatted(time / 1000 / 60, time / 1000 % 60, time % 1000 / 10);
         String scoreText = "SCORE: " + score;
-        String healthText = "HP: " + heroAircraft.getHealth();
+        String healthText = "HP: " + HeroAircraft.getInstance().getHealth();
         
         g2d.setFont(new Font("SansSerif", Font.BOLD, 23));
         

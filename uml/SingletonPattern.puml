@@ -1,0 +1,45 @@
+@startuml
+' 单例模式UML结构图 - 飞机大战游戏 英雄机
+
+skinparam class {
+  borderColor Black
+  borderWidth 1
+}
+
+class HeroAircraft {
+  -{static} volatile HeroAircraft INSTANCE
+  -HeroAircraft()
+  +{static} HeroAircraft getInstance()
+}
+
+class Client {
+  +void someOperation()
+}
+
+note top of HeroAircraft
+  单例模式 (Singleton Pattern)
+  懒汉式 + 双重检查锁定
+end note
+
+note right of HeroAircraft
+  特点:
+  1. 私有构造函数
+  2. 静态实例变量
+  3. 公共静态获取实例方法
+  4. 线程安全
+  5. 延迟初始化
+end note
+
+note bottom of HeroAircraft
+  在飞机大战游戏中，英雄机是玩家控制的唯一一架飞机，
+  因此整个游戏运行期间只需要一个实例。
+end note
+
+Client ..> HeroAircraft : uses getInstance()
+
+note right of Client
+  客户端通过调用getInstance()方法
+  获取HeroAircraft的单例实例
+end note
+
+@enduml

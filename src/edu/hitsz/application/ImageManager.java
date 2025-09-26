@@ -29,14 +29,14 @@ public class ImageManager {
     private static final Path IMAGE_PATH = Paths.get("src/images");
     
     public static final BufferedImage BACKGROUND_IMAGE;
-    private static final BufferedImage HERO_IMAGE;
-    private static final BufferedImage HERO_BULLET_IMAGE;
-    private static final BufferedImage ENEMY_BULLET_IMAGE;
-    private static final BufferedImage MOB_ENEMY_IMAGE;
-    private static final BufferedImage ELITE_ENEMY_IMAGE;
-    private static final BufferedImage HEALTH_PROP_IMAGE;
-    private static final BufferedImage BULLET_PROP_IMAGE;
-    private static final BufferedImage BOMB_PROP_IMAGE;
+    public static final BufferedImage HERO_IMAGE;
+    public static final BufferedImage HERO_BULLET_IMAGE;
+    public static final BufferedImage ENEMY_BULLET_IMAGE;
+    public static final BufferedImage MOB_ENEMY_IMAGE;
+    public static final BufferedImage ELITE_ENEMY_IMAGE;
+    public static final BufferedImage HEALTH_PROP_IMAGE;
+    public static final BufferedImage BULLET_PROP_IMAGE;
+    public static final BufferedImage BOMB_PROP_IMAGE;
     
     static {
         // 每次启动时随机加载背景

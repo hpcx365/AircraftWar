@@ -1,0 +1,70 @@
+@startuml
+' 敌机工厂模式UML结构图 - 飞机大战游戏
+
+' 定义接口和抽象类样式
+skinparam abstract {
+  borderColor DeepPink
+  borderWidth 2
+}
+
+skinparam class {
+  borderColor Black
+  borderWidth 1
+}
+
+class Game {}
+
+' 敌机工厂模式结构
+package "敌机工厂模式" {
+  abstract class EnemyFactory {
+    +{abstract} AbstractAircraft createEnemy()
+  }
+  
+  class MobEnemyFactory {
+    +AbstractAircraft createEnemy()
+  }
+  
+  class EliteEnemyFactory {
+    +AbstractAircraft createEnemy()
+  }
+
+  abstract class AbstractAircraft {
+    #int maxHealth
+    #int health
+    #int speedX
+    #int speedY
+    #int locationX
+    #int locationY
+    +void forward()
+    +{abstract} List<BaseBullet> shoot()
+  }
+
+  class MobEnemy {
+    +List<BaseBullet> shoot()
+  }
+  
+  class EliteEnemy {
+    -int shootNum
+    -int power
+    +List<BaseBullet> shoot()
+  }
+}
+
+' 继承关系
+EnemyFactory <|-- MobEnemyFactory
+EnemyFactory <|-- EliteEnemyFactory
+AbstractAircraft <|-- MobEnemy
+AbstractAircraft <|-- EliteEnemy
+
+' 使用关系
+Game ..> EnemyFactory
+Game ..> AbstractAircraft
+MobEnemyFactory ..> MobEnemy
+EliteEnemyFactory ..> EliteEnemy
+
+note top of EnemyFactory
+  工厂方法模式
+  用于创建不同类型的敌机
+end note
+
+@enduml

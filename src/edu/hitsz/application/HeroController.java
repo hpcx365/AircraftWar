@@ -16,8 +16,6 @@ import static java.awt.event.KeyEvent.*;
  */
 public class HeroController implements MouseListener, MouseMotionListener, MouseWheelListener, KeyListener {
     
-    private final Game game;
-    
     private int directionX = 0;
     private int directionY = 0;
     private boolean dragging = false;
@@ -26,10 +24,6 @@ public class HeroController implements MouseListener, MouseMotionListener, Mouse
     private int heroLocationY;
     
     public HeroController(Game game) {
-        this.game = game;
-    }
-    
-    public void install() {
         game.addMouseListener(this);
         game.addMouseMotionListener(this);
         game.addMouseWheelListener(this);
@@ -37,7 +31,7 @@ public class HeroController implements MouseListener, MouseMotionListener, Mouse
     }
     
     public void move() {
-        HeroAircraft hero = game.getHeroAircraft();
+        HeroAircraft hero = HeroAircraft.getInstance();
         
         if (!dragging) {
             heroLocationX = hero.getLocationX() + directionX * 8;
@@ -52,7 +46,7 @@ public class HeroController implements MouseListener, MouseMotionListener, Mouse
     }
     
     @Override public void mousePressed(MouseEvent e) {
-        if (game.getHeroAircraft().getBoundingBox().contains(e.getPoint())) {
+        if (HeroAircraft.getInstance().getBoundingBox().contains(e.getPoint())) {
             dragging = true;
         }
     }

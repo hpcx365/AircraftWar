@@ -55,6 +55,11 @@ import java.util.List;
         return INSTANCE;
     }
     
+    // 用于测试的重置方法
+    public static void resetInstanceForTest() {
+        INSTANCE = null;
+    }
+    
     @Override public void forward() {
         // 英雄机由鼠标控制，不通过forward函数移动
         throw new UnsupportedOperationException();

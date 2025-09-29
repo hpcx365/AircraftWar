@@ -10,32 +10,32 @@ import java.util.ArrayList;
 import java.util.List;
 
 /**
- * 精英敌机
- * 可直线射击
+ * 超级精英敌机
+ * 可扇形射击，左右移动
  *
  * @author fengyang
  */
-@Getter @Setter public class EliteEnemy extends AbstractAircraft {
+@Getter @Setter public class SuperEliteEnemy extends AbstractAircraft {
     
     // 子弹一次发射数量
-    private int shootNum = 2;
+    private int shootNum = 3;
     
     // 子弹伤害
-    private int power = 30;
+    private int power = 50;
     
-    public EliteEnemy(int locationX, int locationY, int speedX, int speedY, int hp, RandomTimedTrigger shootTrigger) {
-        super(locationX, locationY, speedX, speedY, hp, shootTrigger);
+    public SuperEliteEnemy(int locationX, int locationY, int speedX, int speedY, int health, RandomTimedTrigger shootTrigger) {
+        super(locationX, locationY, speedX, speedY, health, shootTrigger);
     }
     
     @Override public List<BaseBullet> shoot() {
         int x = locationX;
         int y = locationY + 2;
-        int vx = 0;
+        int vx = 2;
         int vy = speedY + 5;
         
         List<BaseBullet> res = new ArrayList<>();
         for (int i = 0; i < shootNum; i++) {
-            res.add(new EnemyBullet(x + (i * 2 - shootNum + 1) * 10, y, vx, vy, power));
+            res.add(new EnemyBullet(x + (i * 2 - shootNum + 1) * 10, y, (i * 2 - shootNum + 1) * vx, vy, power));
         }
         return res;
     }

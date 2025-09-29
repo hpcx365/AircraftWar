@@ -17,6 +17,6 @@ import lombok.Getter;
     
     @Override public void takeEffect(HeroAircraft heroAircraft) {
         System.out.println("FireSupply active!");
-        heroAircraft.setShootNum(heroAircraft.getShootNum() + numBullet);
+        heroAircraft.setShootNum(Math.min(heroAircraft.getShootNum() + numBullet, 5));
     }
 }

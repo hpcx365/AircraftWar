@@ -1,8 +1,6 @@
 package edu.hitsz.application;
 
-import edu.hitsz.aircraft.EliteEnemy;
-import edu.hitsz.aircraft.HeroAircraft;
-import edu.hitsz.aircraft.MobEnemy;
+import edu.hitsz.aircraft.*;
 import edu.hitsz.bullet.EnemyBullet;
 import edu.hitsz.bullet.HeroBullet;
 import edu.hitsz.prop.BombProp;
@@ -34,6 +32,8 @@ public class ImageManager {
     public static final BufferedImage ENEMY_BULLET_IMAGE;
     public static final BufferedImage MOB_ENEMY_IMAGE;
     public static final BufferedImage ELITE_ENEMY_IMAGE;
+    public static final BufferedImage SUPER_ELITE_ENEMY_IMAGE;
+    public static final BufferedImage BOSS_ENEMY_IMAGE;
     public static final BufferedImage HEALTH_PROP_IMAGE;
     public static final BufferedImage BULLET_PROP_IMAGE;
     public static final BufferedImage BOMB_PROP_IMAGE;
@@ -52,6 +52,8 @@ public class ImageManager {
         ELITE_ENEMY_IMAGE = loadImage("elite.png");
         HERO_BULLET_IMAGE = loadImage("bullet_hero.png");
         ENEMY_BULLET_IMAGE = loadImage("bullet_enemy.png");
+        SUPER_ELITE_ENEMY_IMAGE = loadImage("super_elite.png");
+        BOSS_ENEMY_IMAGE = loadImage("boss.png");
         HEALTH_PROP_IMAGE = loadImage("prop_blood.png");
         BULLET_PROP_IMAGE = loadImage("prop_bullet.png");
         BOMB_PROP_IMAGE = loadImage("prop_bomb.png");
@@ -72,6 +74,8 @@ public class ImageManager {
             Map.entry(HeroAircraft.class, HERO_IMAGE),
             Map.entry(MobEnemy.class, MOB_ENEMY_IMAGE),
             Map.entry(EliteEnemy.class, ELITE_ENEMY_IMAGE),
+            Map.entry(SuperEliteEnemy.class, SUPER_ELITE_ENEMY_IMAGE),
+            Map.entry(BossEnemy.class, BOSS_ENEMY_IMAGE),
             Map.entry(HeroBullet.class, HERO_BULLET_IMAGE),
             Map.entry(EnemyBullet.class, ENEMY_BULLET_IMAGE),
             Map.entry(HealthProp.class, HEALTH_PROP_IMAGE),

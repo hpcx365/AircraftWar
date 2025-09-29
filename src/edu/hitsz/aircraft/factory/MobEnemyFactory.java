@@ -1,13 +1,14 @@
-package edu.hitsz.aircraft;
+package edu.hitsz.aircraft.factory;
 
+import edu.hitsz.aircraft.AbstractAircraft;
+import edu.hitsz.aircraft.MobEnemy;
 import edu.hitsz.application.Main;
-import edu.hitsz.util.RandomTimedTrigger;
 import pers.hpcx.util.Random;
 
-public class EliteEnemyFactory implements EnemyFactory {
+public class MobEnemyFactory implements EnemyFactory {
     
     @Override public AbstractAircraft createEnemy() {
-        EliteEnemy enemy = new EliteEnemy(0, 0, 0, Random.getInstance().nextRange(1, 3), 300, new RandomTimedTrigger(600, 1000));
+        MobEnemy enemy = new MobEnemy(0, 0, 0, Random.getInstance().nextRange(2, 6), 100);
         enemy.setLocationX(Random.getInstance().nextRange(enemy.getWidth() / 2, Main.WINDOW_WIDTH - enemy.getWidth() / 2));
         enemy.setLocationY(-enemy.getHeight() / 2);
         return enemy;

@@ -1,10 +1,16 @@
 package edu.hitsz.application;
 
 import edu.hitsz.aircraft.*;
+import edu.hitsz.aircraft.factory.*;
 import edu.hitsz.basic.AbstractFlyingObject;
 import edu.hitsz.bullet.BaseBullet;
-import edu.hitsz.prop.*;
+import edu.hitsz.prop.BaseProp;
+import edu.hitsz.prop.factory.BombPropFactory;
+import edu.hitsz.prop.factory.BulletPropFactory;
+import edu.hitsz.prop.factory.HealthPropFactory;
+import edu.hitsz.prop.factory.PropFactory;
 import edu.hitsz.util.RandomTimedTrigger;
+import edu.hitsz.util.ScoreTrigger;
 import lombok.Getter;
 import pers.hpcx.util.Random;
 import pers.hpcx.visual.NineGrid;
@@ -47,11 +53,17 @@ import java.util.function.Predicate;
     // 游戏是否结束
     private boolean gameOver = false;
     
-    // 普通敌机产生定时触发器
-    private final RandomTimedTrigger modEnemySpawnDuration = new RandomTimedTrigger(500, 1000);
+    // 普通敌机随机定时产生触发器
+    private final RandomTimedTrigger modEnemySpawnTrigger = new RandomTimedTrigger(500, 1000);
     
-    // 英雄敌机产生定时触发器
-    private final RandomTimedTrigger eliteEnemySpawnDuration = new RandomTimedTrigger(6000, 10000);
+    // 精英敌机随机定时产生触发器
+    private final RandomTimedTrigger eliteEnemySpawnTrigger = new RandomTimedTrigger(6000, 10000);
+    
+    // 超级精英敌机随机定时产生触发器
+    private final RandomTimedTrigger superEliteEnemySpawnTrigger = new RandomTimedTrigger(12000, 20000);
+    
+    // Boss 敌机计分产生触发器
+    private final ScoreTrigger bossEnemySpawnTrigger = new ScoreTrigger(1000);
     
     private HeroController heroController;
     
@@ -115,18 +127,35 @@ import java.util.function.Predicate;
      * 生成敌机
      */
     private void spawnEnemy() {
-        if (modEnemySpawnDuration.isTriggered(TIME_INTERVAL) && enemyAircrafts.size() < MAX_ENEMY_NUMBER) {
+        if (enemyAircrafts.size() < MAX_ENEMY_NUMBER && modEnemySpawnTrigger.isTriggered(TIME_INTERVAL)) {
             // 使用普通敌机工厂创建敌机
             EnemyFactory factory = new MobEnemyFactory();
             AbstractAircraft enemy = factory.createEnemy();
             enemyAircrafts.add(enemy);
         }
         
-        if (eliteEnemySpawnDuration.isTriggered(TIME_INTERVAL) && enemyAircrafts.size() < MAX_ENEMY_NUMBER) {
+        if (enemyAircrafts.size() < MAX_ENEMY_NUMBER && eliteEnemySpawnTrigger.isTriggered(TIME_INTERVAL)) {
             // 使用精英敌机工厂创建敌机
             EnemyFactory factory = new EliteEnemyFactory();
             AbstractAircraft enemy = factory.createEnemy();
             enemyAircrafts.add(enemy);
+        }
+        
+        if (enemyAircrafts.size() < MAX_ENEMY_NUMBER && superEliteEnemySpawnTrigger.isTriggered(TIME_INTERVAL)) {
+            // 使用超级精英敌机工厂创建敌机
+            EnemyFactory factory = new SuperEliteEnemyFactory();
+            AbstractAircraft enemy = factory.createEnemy();
+            enemyAircrafts.add(enemy);
+        }
+        
+        if (enemyAircrafts.size() < MAX_ENEMY_NUMBER && bossEnemySpawnTrigger.isTriggered(score)) {
+            // 场上不会出现两架 Boss
+            if (enemyAircrafts.stream().noneMatch(enemy -> enemy instanceof BossEnemy)) {
+                // 使用 Boss 敌机工厂创建敌机
+                EnemyFactory factory = new BossEnemyFactory();
+                AbstractAircraft enemy = factory.createEnemy();
+                enemyAircrafts.add(enemy);
+            }
         }
     }
     
@@ -182,26 +211,31 @@ import java.util.function.Predicate;
                 .forEach(bullet -> enemyAircrafts.stream()
                         .filter(AbstractFlyingObject::isAlive)
                         .filter(bullet::crash)
-                        .forEach(enemyAircraft -> {
+                        .forEach(enemy -> {
                             // 敌机撞击到英雄机子弹损失一定生命值
                             bullet.vanish();
-                            enemyAircraft.decreaseHp(bullet.getPower());
+                            enemy.decreaseHp(bullet.getPower());
                         }));
         
         // 英雄机与敌机相撞
         enemyAircrafts.stream()
                 .filter(AbstractFlyingObject::isAlive)
                 .filter(HeroAircraft.getInstance()::crash)
-                .forEach(enemyAircraft -> {
+                .forEach(enemy -> {
                     // 英雄机撞击到敌机损失一定生命值
-                    enemyAircraft.vanish();
-                    HeroAircraft.getInstance().decreaseHp(50);
+                    enemy.vanish();
+                    HeroAircraft.getInstance().decreaseHp(switch (enemy) {
+                        case MobEnemy mobEnemy -> 50;
+                        case EliteEnemy eliteEnemy -> 200;
+                        case SuperEliteEnemy superEliteEnemy -> 500;
+                        default -> HeroAircraft.getInstance().getHealth();
+                    });
                 });
         
         // 结算摧毁敌机奖励
         enemyAircrafts.stream()
                 .filter(Predicate.not(AbstractFlyingObject::isAlive))
-                .filter(enemyAircraft -> enemyAircraft.getHealth() <= 0)
+                .filter(enemy -> enemy.getHealth() <= 0)
                 .forEach(this::onEnemyDestroy);
     }
     
@@ -210,13 +244,29 @@ import java.util.function.Predicate;
      */
     private void onEnemyDestroy(AbstractAircraft enemy) {
         switch (enemy) {
+        
         case MobEnemy mobEnemy -> {
             score += 10;
         }
+        
         case EliteEnemy eliteEnemy -> {
             score += 50;
             spawnProp(enemy.getLocationX(), enemy.getLocationY());
         }
+        
+        case SuperEliteEnemy superEliteEnemy -> {
+            score += 100;
+            spawnProp(enemy.getLocationX(), enemy.getLocationY());
+        }
+        
+        case BossEnemy bossEnemy -> {
+            score += 500;
+            int numProps = Random.getInstance().nextRange(1, 3);
+            for (int i = 0; i < numProps; i++) {
+                spawnProp(enemy.getLocationX(), enemy.getLocationY());
+            }
+        }
+        
         default -> {
         }
         }

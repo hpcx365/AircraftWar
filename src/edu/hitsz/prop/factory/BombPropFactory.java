@@ -1,4 +1,7 @@
-package edu.hitsz.prop;
+package edu.hitsz.prop.factory;
+
+import edu.hitsz.prop.BaseProp;
+import edu.hitsz.prop.BulletProp;
 
 public class BombPropFactory implements PropFactory {
     

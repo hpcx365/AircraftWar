@@ -3,7 +3,7 @@ package edu.hitsz.util;
 import pers.hpcx.util.Args;
 
 /**
- * 计分触发器<br>
+ * 计分触发器
  *
  * @author fengyang
  */

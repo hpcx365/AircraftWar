@@ -6,6 +6,6 @@ import edu.hitsz.prop.BulletProp;
 public class BombPropFactory implements PropFactory {
     
     @Override public BaseProp createProp() {
-        return new BulletProp(0, 0, 0, 0, 1);
+        return new BulletProp();
     }
 }

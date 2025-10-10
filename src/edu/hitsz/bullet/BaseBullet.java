@@ -1,7 +1,9 @@
 package edu.hitsz.bullet;
 
+import edu.hitsz.application.Main;
 import edu.hitsz.basic.AbstractFlyingObject;
 import lombok.Getter;
+import pers.hpcx.util.Args;
 
 /**
  * 子弹基类<br>
@@ -12,10 +14,18 @@ import lombok.Getter;
  */
 @Getter public abstract class BaseBullet extends AbstractFlyingObject {
     
-    protected final int power;
+    private final int power;
     
-    protected BaseBullet(int locationX, int locationY, int speedX, int speedY, int power) {
-        super(locationX, locationY, speedX, speedY);
+    protected BaseBullet(int power) {
+        Args.assertPositive(power, "power");
         this.power = power;
+    }
+    
+    @Override public void forward() {
+        locationX += speedX;
+        locationY += speedY;
+        if (!getBoundingBox().intersects(Main.WINDOW_AREA)) {
+            vanish();
+        }
     }
 }

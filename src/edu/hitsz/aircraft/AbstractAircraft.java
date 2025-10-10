@@ -2,9 +2,11 @@ package edu.hitsz.aircraft;
 
 import edu.hitsz.basic.AbstractFlyingObject;
 import edu.hitsz.bullet.BaseBullet;
-import edu.hitsz.util.RandomTimedTrigger;
+import edu.hitsz.shoot.ShootingStrategy;
+import edu.hitsz.util.TimedTrigger;
 import lombok.Getter;
 import lombok.Setter;
+import pers.hpcx.util.Args;
 
 import java.util.List;
 
@@ -18,22 +20,32 @@ import java.util.List;
 @Getter @Setter public abstract class AbstractAircraft extends AbstractFlyingObject {
     
     // 最大生命值
-    protected int maxHealth;
+    protected final int maxHealth;
     
     // 剩余生命值
     protected int health;
     
-    // 子弹发射定时触发器，为 null 表示无法发射子弹
-    protected RandomTimedTrigger shootTrigger;
+    // 子弹发射定时触发器
+    protected TimedTrigger shootingTrigger;
     
-    protected AbstractAircraft(int locationX, int locationY, int speedX, int speedY, int health, RandomTimedTrigger shootTrigger) {
-        super(locationX, locationY, speedX, speedY);
+    // 射击策略
+    protected ShootingStrategy<?> shootingStrategy;
+    
+    protected AbstractAircraft(int health) {
+        Args.assertPositive(health, "health");
         this.health = health;
         this.maxHealth = health;
-        this.shootTrigger = shootTrigger;
+    }
+    
+    /**
+     * 发射子弹
+     */
+    public List<? extends BaseBullet> shoot() {
+        return shootingStrategy.shoot(this);
     }
     
     public void decreaseHp(int decrease) {
+        Args.assertNonNegative(decrease, "decrease");
         health = Math.max(health - decrease, 0);
         if (health == 0) {
             vanish();
@@ -41,14 +53,7 @@ import java.util.List;
     }
     
     public void increaseHp(int increase) {
+        Args.assertNonNegative(increase, "increase");
         health = Math.min(health + increase, maxHealth);
     }
-    
-    /**
-     * 飞机射击方法，可射击对象必须实现
-     *
-     * @return 可射击对象需实现，返回子弹
-     * 非可射击对象空实现，返回null
-     */
-    public abstract List<BaseBullet> shoot();
 }

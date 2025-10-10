@@ -20,8 +20,8 @@ public class HeroController implements MouseListener, MouseMotionListener, Mouse
     private int directionY = 0;
     private boolean dragging = false;
     
-    private int heroLocationX;
-    private int heroLocationY;
+    private double heroLocationX;
+    private double heroLocationY;
     
     public HeroController(Game game) {
         game.addMouseListener(this);

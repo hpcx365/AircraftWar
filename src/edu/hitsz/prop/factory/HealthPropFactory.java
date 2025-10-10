@@ -6,6 +6,6 @@ import edu.hitsz.prop.HealthProp;
 public class HealthPropFactory implements PropFactory {
     
     @Override public BaseProp createProp() {
-        return new HealthProp(0, 0, 0, 0, 100);
+        return new HealthProp();
     }
 }

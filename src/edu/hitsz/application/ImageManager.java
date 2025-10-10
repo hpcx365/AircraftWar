@@ -6,7 +6,7 @@ import edu.hitsz.bullet.HeroBullet;
 import edu.hitsz.prop.BombProp;
 import edu.hitsz.prop.BulletProp;
 import edu.hitsz.prop.HealthProp;
-import pers.hpcx.util.Random;
+import edu.hitsz.prop.SuperBulletProp;
 
 import javax.imageio.ImageIO;
 import java.awt.image.BufferedImage;
@@ -14,6 +14,7 @@ import java.io.IOException;
 import java.nio.file.Path;
 import java.nio.file.Paths;
 import java.util.Map;
+import java.util.concurrent.ThreadLocalRandom;
 
 /**
  * 综合管理图片的加载，访问
@@ -37,16 +38,18 @@ public class ImageManager {
     public static final BufferedImage HEALTH_PROP_IMAGE;
     public static final BufferedImage BULLET_PROP_IMAGE;
     public static final BufferedImage BOMB_PROP_IMAGE;
+    public static final BufferedImage SUPER_BULLET_PROP_IMAGE;
     
     static {
+        String[] backgrounds = {
+            "bg.jpg",
+            "bg2.jpg",
+            "bg3.jpg",
+            "bg4.jpg",
+            "bg5.jpg",
+        };
         // 每次启动时随机加载背景
-        BACKGROUND_IMAGE = loadImage(Random.getInstance().choice(new String[] {
-                "bg.jpg",
-                "bg2.jpg",
-                "bg3.jpg",
-                "bg4.jpg",
-                "bg5.jpg",
-        }));
+        BACKGROUND_IMAGE = loadImage(backgrounds[ThreadLocalRandom.current().nextInt(backgrounds.length)]);
         HERO_IMAGE = loadImage("hero.png");
         MOB_ENEMY_IMAGE = loadImage("mob.png");
         ELITE_ENEMY_IMAGE = loadImage("elite.png");
@@ -57,6 +60,7 @@ public class ImageManager {
         HEALTH_PROP_IMAGE = loadImage("prop_blood.png");
         BULLET_PROP_IMAGE = loadImage("prop_bullet.png");
         BOMB_PROP_IMAGE = loadImage("prop_bomb.png");
+        SUPER_BULLET_PROP_IMAGE = loadImage("prop_super_bullet.png");
     }
     
     private static BufferedImage loadImage(String name) {
@@ -71,16 +75,17 @@ public class ImageManager {
      * 类名-图片 映射，存储各基类的图片
      */
     private static final Map<Class<?>, BufferedImage> CLASSNAME_IMAGE_MAP = Map.ofEntries(
-            Map.entry(HeroAircraft.class, HERO_IMAGE),
-            Map.entry(MobEnemy.class, MOB_ENEMY_IMAGE),
-            Map.entry(EliteEnemy.class, ELITE_ENEMY_IMAGE),
-            Map.entry(SuperEliteEnemy.class, SUPER_ELITE_ENEMY_IMAGE),
-            Map.entry(BossEnemy.class, BOSS_ENEMY_IMAGE),
-            Map.entry(HeroBullet.class, HERO_BULLET_IMAGE),
-            Map.entry(EnemyBullet.class, ENEMY_BULLET_IMAGE),
-            Map.entry(HealthProp.class, HEALTH_PROP_IMAGE),
-            Map.entry(BulletProp.class, BULLET_PROP_IMAGE),
-            Map.entry(BombProp.class, BOMB_PROP_IMAGE)
+        Map.entry(HeroAircraft.class, HERO_IMAGE),
+        Map.entry(MobEnemy.class, MOB_ENEMY_IMAGE),
+        Map.entry(EliteEnemy.class, ELITE_ENEMY_IMAGE),
+        Map.entry(SuperEliteEnemy.class, SUPER_ELITE_ENEMY_IMAGE),
+        Map.entry(BossEnemy.class, BOSS_ENEMY_IMAGE),
+        Map.entry(HeroBullet.class, HERO_BULLET_IMAGE),
+        Map.entry(EnemyBullet.class, ENEMY_BULLET_IMAGE),
+        Map.entry(HealthProp.class, HEALTH_PROP_IMAGE),
+        Map.entry(BulletProp.class, BULLET_PROP_IMAGE),
+        Map.entry(BombProp.class, BOMB_PROP_IMAGE),
+        Map.entry(SuperBulletProp.class, SUPER_BULLET_PROP_IMAGE)
     );
     
     public static BufferedImage get(Object obj) {

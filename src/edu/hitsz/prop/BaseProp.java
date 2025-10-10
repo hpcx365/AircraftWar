@@ -11,9 +11,5 @@ import edu.hitsz.basic.AbstractFlyingObject;
  */
 public abstract class BaseProp extends AbstractFlyingObject {
     
-    protected BaseProp(int locationX, int locationY, int speedX, int speedY) {
-        super(locationX, locationY, speedX, speedY);
-    }
-    
     public abstract void takeEffect(HeroAircraft heroAircraft);
 }

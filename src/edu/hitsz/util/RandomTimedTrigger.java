@@ -1,10 +1,11 @@
 package edu.hitsz.util;
 
 import pers.hpcx.util.Args;
-import pers.hpcx.util.Random;
+
+import java.util.concurrent.ThreadLocalRandom;
 
 /**
- * 随机定时触发器<br>
+ * 随机定时触发器
  *
  * @author fengyang
  */
@@ -24,7 +25,7 @@ public class RandomTimedTrigger {
     
     public boolean isTriggered(int deltaTime) {
         if (nextTriggerTime <= 0) {
-            nextTriggerTime = Random.getInstance().nextRange(minDuration, maxDuration);
+            nextTriggerTime = ThreadLocalRandom.current().nextInt(minDuration, maxDuration);
         }
         nextTriggerTime -= deltaTime;
         return nextTriggerTime <= 0;

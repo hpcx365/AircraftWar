@@ -5,7 +5,7 @@ import edu.hitsz.application.Main;
 import lombok.Getter;
 import lombok.Setter;
 
-import java.awt.*;
+import java.awt.geom.Rectangle2D;
 import java.awt.image.BufferedImage;
 
 /**
@@ -17,27 +17,18 @@ import java.awt.image.BufferedImage;
 @Getter @Setter public abstract class AbstractFlyingObject {
     
     // locationX、locationY 为图片中心位置坐标
-    protected int locationX;
-    protected int locationY;
+    protected double locationX;
+    protected double locationY;
     
-    // x 轴移动速度
-    protected int speedX;
-    
-    // y 轴移动速度
-    protected int speedY;
+    // x, y 轴移动速度
+    protected double speedX;
+    protected double speedY;
     
     // 图片，懒加载
     protected BufferedImage image = null;
     
     // 生存标记，标记为 false 的对象会在下次刷新时清除
     protected boolean alive = true;
-    
-    protected AbstractFlyingObject(int locationX, int locationY, int speedX, int speedY) {
-        this.locationX = locationX;
-        this.locationY = locationY;
-        this.speedX = speedX;
-        this.speedY = speedY;
-    }
     
     /**
      * 可飞行对象根据速度移动
@@ -58,8 +49,8 @@ import java.awt.image.BufferedImage;
         return getBoundingBox().intersects(that.getBoundingBox());
     }
     
-    public Rectangle getBoundingBox() {
-        return new Rectangle(locationX - getWidth() / 2, locationY - getHeight() / 2, getWidth(), getHeight());
+    public Rectangle2D getBoundingBox() {
+        return new Rectangle2D.Double(locationX - 0.5 * getWidth(), locationY - 0.5 * getHeight(), getWidth(), getHeight());
     }
     
     public BufferedImage getImage() {

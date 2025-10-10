@@ -5,14 +5,13 @@ import edu.hitsz.aircraft.factory.*;
 import edu.hitsz.basic.AbstractFlyingObject;
 import edu.hitsz.bullet.BaseBullet;
 import edu.hitsz.prop.BaseProp;
-import edu.hitsz.prop.factory.BombPropFactory;
-import edu.hitsz.prop.factory.BulletPropFactory;
-import edu.hitsz.prop.factory.HealthPropFactory;
-import edu.hitsz.prop.factory.PropFactory;
+import edu.hitsz.prop.factory.*;
+import edu.hitsz.scoreboard.ScoreboardDAO;
+import edu.hitsz.scoreboard.ScoreboardEntry;
+import edu.hitsz.scoreboard.impl.FileScoreboardDAOImpl;
 import edu.hitsz.util.RandomTimedTrigger;
 import edu.hitsz.util.ScoreTrigger;
 import lombok.Getter;
-import pers.hpcx.util.Random;
 import pers.hpcx.visual.NineGrid;
 import pers.hpcx.visual.PaintUtils;
 
@@ -21,8 +20,13 @@ import java.awt.*;
 import java.awt.event.ActionEvent;
 import java.awt.event.ActionListener;
 import java.awt.image.BufferedImage;
+import java.nio.file.Paths;
+import java.time.LocalDateTime;
+import java.time.format.DateTimeFormatter;
+import java.util.ArrayList;
 import java.util.LinkedList;
 import java.util.List;
+import java.util.concurrent.ThreadLocalRandom;
 import java.util.function.Predicate;
 
 /**
@@ -32,7 +36,7 @@ import java.util.function.Predicate;
  */
 @Getter public class Game extends JPanel implements ActionListener {
     
-    // 时间间隔(ms)，控制刷新频率
+    // 时间间隔 (ms)，控制刷新频率
     private static final int TIME_INTERVAL = 10;
     
     // 定时器，定时循环游戏帧
@@ -44,7 +48,7 @@ import java.util.function.Predicate;
     // 背景图滚动位置
     private int backGroundTop = 0;
     
-    // 当前游戏时间
+    // 当前游戏时间 (ms)
     private int time = 0;
     
     // 当前得分
@@ -71,6 +75,9 @@ import java.util.function.Predicate;
     private final List<BaseBullet> enemyBullets = new LinkedList<>();
     private final List<AbstractAircraft> enemyAircrafts = new LinkedList<>();
     private final List<BaseProp> props = new LinkedList<>();
+    
+    // 计分板数据访问对象
+    private final ScoreboardDAO scoreboard = new FileScoreboardDAOImpl(Paths.get("scoreboard"));
     
     /**
      * 游戏启动入口
@@ -111,8 +118,7 @@ import java.util.function.Predicate;
         // 检查英雄机是否存活
         if (!HeroAircraft.getInstance().isAlive()) {
             // 游戏结束
-            gameOver = true;
-            timer.stop();
+            onGameOver();
         }
         
         //每个时刻重绘界面
@@ -164,15 +170,15 @@ import java.util.function.Predicate;
      * 2. 敌机射击<br>
      */
     private void shoot() {
-        if (HeroAircraft.getInstance().getShootTrigger().isTriggered(TIME_INTERVAL)) {
+        if (HeroAircraft.getInstance().getShootingTrigger().isTriggered(TIME_INTERVAL)) {
             heroBullets.addAll(HeroAircraft.getInstance().shoot());
         }
         
         enemyAircrafts.stream()
-                .filter(AbstractFlyingObject::isAlive)
-                .filter(enemyAircraft -> enemyAircraft.getShootTrigger() != null)
-                .filter(enemyAircraft -> enemyAircraft.getShootTrigger().isTriggered(TIME_INTERVAL))
-                .forEach(enemyAircraft -> enemyBullets.addAll(enemyAircraft.shoot()));
+            .filter(AbstractFlyingObject::isAlive)
+            .filter(enemyAircraft -> enemyAircraft.getShootingTrigger() != null)
+            .filter(enemyAircraft -> enemyAircraft.getShootingTrigger().isTriggered(TIME_INTERVAL))
+            .forEach(enemyAircraft -> enemyBullets.addAll(enemyAircraft.shoot()));
     }
     
     /**
@@ -197,46 +203,46 @@ import java.util.function.Predicate;
     private void checkCrash() {
         // 敌机子弹攻击英雄
         enemyBullets.stream()
-                .filter(AbstractFlyingObject::isAlive)
-                .filter(HeroAircraft.getInstance()::crash)
-                .forEach(bullet -> {
-                    // 英雄机撞击到敌机子弹损失一定生命值
-                    bullet.vanish();
-                    HeroAircraft.getInstance().decreaseHp(bullet.getPower());
-                });
+            .filter(AbstractFlyingObject::isAlive)
+            .filter(HeroAircraft.getInstance()::crash)
+            .forEach(bullet -> {
+                // 英雄机撞击到敌机子弹损失一定生命值
+                bullet.vanish();
+                HeroAircraft.getInstance().decreaseHp(bullet.getPower());
+            });
         
         // 英雄子弹攻击敌机
         heroBullets.stream()
+            .filter(AbstractFlyingObject::isAlive)
+            .forEach(bullet -> enemyAircrafts.stream()
                 .filter(AbstractFlyingObject::isAlive)
-                .forEach(bullet -> enemyAircrafts.stream()
-                        .filter(AbstractFlyingObject::isAlive)
-                        .filter(bullet::crash)
-                        .forEach(enemy -> {
-                            // 敌机撞击到英雄机子弹损失一定生命值
-                            bullet.vanish();
-                            enemy.decreaseHp(bullet.getPower());
-                        }));
+                .filter(bullet::crash)
+                .forEach(enemy -> {
+                    // 敌机撞击到英雄机子弹损失一定生命值
+                    bullet.vanish();
+                    enemy.decreaseHp(bullet.getPower());
+                }));
         
         // 英雄机与敌机相撞
         enemyAircrafts.stream()
-                .filter(AbstractFlyingObject::isAlive)
-                .filter(HeroAircraft.getInstance()::crash)
-                .forEach(enemy -> {
-                    // 英雄机撞击到敌机损失一定生命值
-                    enemy.vanish();
-                    HeroAircraft.getInstance().decreaseHp(switch (enemy) {
-                        case MobEnemy mobEnemy -> 50;
-                        case EliteEnemy eliteEnemy -> 200;
-                        case SuperEliteEnemy superEliteEnemy -> 500;
-                        default -> HeroAircraft.getInstance().getHealth();
-                    });
+            .filter(AbstractFlyingObject::isAlive)
+            .filter(HeroAircraft.getInstance()::crash)
+            .forEach(enemy -> {
+                // 英雄机撞击到敌机损失一定生命值
+                enemy.vanish();
+                HeroAircraft.getInstance().decreaseHp(switch (enemy) {
+                    case MobEnemy mobEnemy -> 50;
+                    case EliteEnemy eliteEnemy -> 200;
+                    case SuperEliteEnemy superEliteEnemy -> 500;
+                    default -> HeroAircraft.getInstance().getHealth();
                 });
+            });
         
         // 结算摧毁敌机奖励
         enemyAircrafts.stream()
-                .filter(Predicate.not(AbstractFlyingObject::isAlive))
-                .filter(enemy -> enemy.getHealth() <= 0)
-                .forEach(this::onEnemyDestroy);
+            .filter(Predicate.not(AbstractFlyingObject::isAlive))
+            .filter(enemy -> enemy.getHealth() <= 0)
+            .forEach(this::onEnemyDestroy);
     }
     
     /**
@@ -261,7 +267,7 @@ import java.util.function.Predicate;
         
         case BossEnemy bossEnemy -> {
             score += 500;
-            int numProps = Random.getInstance().nextRange(1, 3);
+            int numProps = ThreadLocalRandom.current().nextInt(1, 3);
             for (int i = 0; i < numProps; i++) {
                 spawnProp(enemy.getLocationX(), enemy.getLocationY());
             }
@@ -275,11 +281,11 @@ import java.util.function.Predicate;
     /**
      * 生成道具
      */
-    private void spawnProp(int locationX, int locationY) {
+    private void spawnProp(double locationX, double locationY) {
         PropFactory propFactory;
         
         // 随机选择道具工厂
-        double rnd = Random.getInstance().nextDouble();
+        double rnd = ThreadLocalRandom.current().nextDouble();
         if (rnd < 0.30) {
             propFactory = new HealthPropFactory();
         } else if (rnd < 0.60) {
@@ -287,15 +293,15 @@ import java.util.function.Predicate;
         } else if (rnd < 0.90) {
             propFactory = new BombPropFactory();
         } else {
-            return;
+            propFactory = new SuperBulletPropFactory();
         }
         
         // 使用工厂创建道具
         BaseProp prop = propFactory.createProp();
         prop.setLocationX(locationX);
         prop.setLocationY(locationY);
-        prop.setSpeedX(Random.getInstance().nextRange(-3, 3));
-        prop.setSpeedY(Random.getInstance().nextRange(1, 3));
+        prop.setSpeedX(ThreadLocalRandom.current().nextDouble(-3, 3));
+        prop.setSpeedY(ThreadLocalRandom.current().nextDouble(1, 3));
         props.add(prop);
     }
     
@@ -304,12 +310,12 @@ import java.util.function.Predicate;
      */
     private void propTakesEffect() {
         props.stream()
-                .filter(AbstractFlyingObject::isAlive)
-                .filter(HeroAircraft.getInstance()::crash)
-                .forEach(prop -> {
-                    prop.takeEffect(HeroAircraft.getInstance());
-                    prop.vanish();
-                });
+            .filter(AbstractFlyingObject::isAlive)
+            .filter(HeroAircraft.getInstance()::crash)
+            .forEach(prop -> {
+                prop.takeEffect(HeroAircraft.getInstance());
+                prop.vanish();
+            });
     }
     
     /**
@@ -322,6 +328,27 @@ import java.util.function.Predicate;
         enemyBullets.removeIf(Predicate.not(AbstractFlyingObject::isAlive));
         enemyAircrafts.removeIf(Predicate.not(AbstractFlyingObject::isAlive));
         props.removeIf(Predicate.not(AbstractFlyingObject::isAlive));
+    }
+    
+    private void onGameOver() {
+        gameOver = true;
+        timer.stop();
+        
+        scoreboard.append(new ScoreboardEntry("testUserName", score, time, LocalDateTime.now()));
+        List<ScoreboardEntry> list = new ArrayList<>(scoreboard.listAll());
+        list.sort(null);
+        System.out.println("==++==++==++==++====++==++==++==++====++==++==++==++==");
+        System.out.println("                      Scoreboard                      ");
+        System.out.println("==++==++==++==++====++==++==++==++====++==++==++==++==");
+        DateTimeFormatter formatter = DateTimeFormatter.ofPattern("MM-dd hh:mm:ss");
+        for (int i = 0; i < list.size() && i < 20; i++) {
+            ScoreboardEntry entry = list.get(i);
+            System.out.printf("Rank %d:\tPlayer: %s\tScore: %d\tSurvival: %02d:%02d\tTime: %s%n",
+                i + 1, entry.playerName(), entry.score(),
+                entry.survivalTime() / 1000 / 60, entry.survivalTime() / 1000 % 60,
+                formatter.format(entry.playTime())
+            );
+        }
     }
     
     //***********************
@@ -351,31 +378,35 @@ import java.util.function.Predicate;
         drawUI(g2d);
     }
     
-    private void drawFlyingObject(Graphics2D g2d, AbstractFlyingObject object) {
+    private void drawFlyingObject(Graphics2D g, AbstractFlyingObject object) {
         BufferedImage image = object.getImage();
-        g2d.drawImage(image, object.getLocationX() - image.getWidth() / 2, object.getLocationY() - image.getHeight() / 2, null);
+        double x = object.getLocationX() - image.getWidth() * 0.5;
+        double y = object.getLocationY() - image.getHeight() * 0.5;
+        g.translate(x, y);
+        g.drawImage(image, 0, 0, null);
+        g.translate(-x, -y);
     }
     
-    private void drawUI(Graphics2D g2d) {
+    private void drawUI(Graphics2D g) {
         String timeText = "%02d:%02d:%02d".formatted(time / 1000 / 60, time / 1000 % 60, time % 1000 / 10);
         String scoreText = "SCORE: " + score;
         String healthText = "HP: " + HeroAircraft.getInstance().getHealth();
         
-        g2d.setFont(new Font("SansSerif", Font.BOLD, 23));
+        g.setFont(new Font("SansSerif", Font.BOLD, 23));
         
         int x = 10;
         int y = 10;
-        drawShadowedText(g2d, timeText, x, y, 3, 3);
+        drawShadowedText(g, timeText, x, y, 3, 3);
         y += 30;
-        drawShadowedText(g2d, scoreText, x, y, 3, 3);
+        drawShadowedText(g, scoreText, x, y, 3, 3);
         y += 30;
-        drawShadowedText(g2d, healthText, x, y, 3, 3);
+        drawShadowedText(g, healthText, x, y, 3, 3);
         
         if (gameOver) {
-            g2d.setColor(new Color(45, 35, 35, 200));
-            g2d.fillRect(0, Main.WINDOW_HEIGHT / 3, Main.WINDOW_WIDTH, Main.WINDOW_HEIGHT / 3);
-            g2d.setFont(new Font("SansSerif", Font.BOLD, 60));
-            drawShadowedText(g2d, "GAME OVER", 0, 0, Main.WINDOW_WIDTH, Main.WINDOW_HEIGHT, 3, 6);
+            g.setColor(new Color(45, 35, 35, 200));
+            g.fillRect(0, Main.WINDOW_HEIGHT / 3, Main.WINDOW_WIDTH, Main.WINDOW_HEIGHT / 3);
+            g.setFont(new Font("SansSerif", Font.BOLD, 60));
+            drawShadowedText(g, "GAME OVER", 0, 0, Main.WINDOW_WIDTH, Main.WINDOW_HEIGHT, 3, 6);
         }
     }
     

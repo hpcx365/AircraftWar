@@ -1,0 +1,99 @@
+@startuml
+
+interface ShootingStrategy {
+    +List<BaseBullet> shoot(AbstractAircraft shooter)
+}
+
+class AbstractAircraft {
+    #int maxHealth
+    #int health
+    #TimedTrigger shootingTrigger
+    #ShootingStrategy<?> shootingStrategy
+    +List<? extends BaseBullet> shoot()
+    +void decreaseHp(int decrease)
+    +void increaseHp(int increase)
+}
+
+class StraightShootingStrategy {
+    -int num
+    -Supplier<BaseBullet> supplier
+    -double speedX
+    -double speedY
+    +List<BaseBullet> shoot(AbstractAircraft shooter)
+}
+
+class FanShootingStrategy {
+    -int num
+    -Supplier<BaseBullet> supplier
+    -double angle
+    -double direction
+    -double speed
+    +List<BaseBullet> shoot(AbstractAircraft shooter)
+}
+
+class RadialShootingStrategy {
+    -int num
+    -Supplier<BaseBullet> supplier
+    -double speed
+    +List<BaseBullet> shoot(AbstractAircraft shooter)
+}
+
+class RingShootingStrategy {
+    -int num
+    -Supplier<BaseBullet> supplier
+    -double radius
+    -double speedX
+    -double speedY
+    +List<BaseBullet> shoot(AbstractAircraft shooter)
+}
+
+class NoneShootingStrategy {
+    +List<BaseBullet> shoot(AbstractAircraft shooter)
+}
+
+' Relationships'
+AbstractAircraft --> ShootingStrategy
+ShootingStrategy <|.. StraightShootingStrategy
+ShootingStrategy <|.. FanShootingStrategy
+ShootingStrategy <|.. RadialShootingStrategy
+ShootingStrategy <|.. RingShootingStrategy
+ShootingStrategy <|.. NoneShootingStrategy
+
+note right of AbstractAircraft::shootingStrategy
+  策略模式应用点:
+  1. 不同飞机类型使用不同射击策略
+  2. 可在运行时动态更换射击策略
+  3. 新增射击策略无需修改飞机类代码
+end note
+
+note right of ShootingStrategy
+  策略模式 - Strategy Interface
+  定义了所有具体策略类必须实现的接口
+end note
+
+note bottom of StraightShootingStrategy
+  具体策略类:
+  直线射击策略
+end note
+
+note bottom of FanShootingStrategy
+  具体策略类:
+  扇形射击策略
+end note
+
+note bottom of RadialShootingStrategy
+  具体策略类:
+  径向射击策略
+end note
+
+note bottom of RingShootingStrategy
+  具体策略类:
+  环形射击策略
+end note
+
+note bottom of NoneShootingStrategy
+  具体策略类:
+  不射击策略
+end note
+
+@enduml

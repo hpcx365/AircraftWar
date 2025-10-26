@@ -14,8 +14,11 @@ import java.awt.image.BufferedImage;
 public abstract class BaseProp extends AbstractFlyingObject {
     
     protected BaseProp(BufferedImage image) {
-        setImage(image);
+        super(image);
     }
     
     public abstract void takeEffect(GamePanel gamePanel);
+    
+    @Override public void onBombExplosion() {
+    }
 }

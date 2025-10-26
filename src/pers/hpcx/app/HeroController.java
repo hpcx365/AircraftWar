@@ -67,7 +67,7 @@ public class HeroController implements MouseListener, MouseMotionListener, Mouse
     }
     
     @Override public void mousePressed(MouseEvent e) {
-        if (gamePanel.getHeroAircraft().getBoundingBox().contains(e.getPoint())) {
+        if (gamePanel.getHeroAircraft().getCollisionBox().contains(e.getPoint())) {
             dragging = true;
         }
     }

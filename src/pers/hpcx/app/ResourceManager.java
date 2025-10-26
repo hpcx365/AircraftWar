@@ -6,7 +6,7 @@ import javax.imageio.ImageIO;
 import java.awt.image.BufferedImage;
 import java.nio.file.Path;
 import java.nio.file.Paths;
-import java.util.concurrent.ThreadLocalRandom;
+import java.util.List;
 
 public class ResourceManager {
     
@@ -14,11 +14,9 @@ public class ResourceManager {
     private static final Path IMAGE_PATH = RESOURCE_PATH.resolve("image");
     private static final Path AUDIO_PATH = RESOURCE_PATH.resolve("audio");
     
-    private static final String[] BACKGROUND_IMAGES = {"bg.jpg", "bg2.jpg", "bg3.jpg", "bg4.jpg", "bg5.jpg",};
-    
-    // 每次启动时随机加载背景
-    public static final BufferedImage BACKGROUND_IMAGE =
-        loadImage(BACKGROUND_IMAGES[ThreadLocalRandom.current().nextInt(BACKGROUND_IMAGES.length)]);
+    public static final List<BufferedImage> BACKGROUND_IMAGES = List.of(
+        loadImage("bg1.jpg"), loadImage("bg2.jpg"), loadImage("bg3.jpg"), loadImage("bg4.jpg"), loadImage("bg5.jpg")
+    );
     public static final BufferedImage HERO_IMAGE = loadImage("hero.png");
     public static final BufferedImage HERO_BULLET_IMAGE = loadImage("bullet_hero.png");
     public static final BufferedImage ENEMY_BULLET_IMAGE = loadImage("bullet_enemy.png");

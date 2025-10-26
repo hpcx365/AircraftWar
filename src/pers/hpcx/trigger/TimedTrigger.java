@@ -1,7 +1,5 @@
 package pers.hpcx.trigger;
 
-import pers.hpcx.util.Args;
-
 /**
  * 定时触发器
  *
@@ -9,20 +7,30 @@ import pers.hpcx.util.Args;
  */
 public class TimedTrigger {
     
-    private final int duration;
+    private long interval;
+    private long nextTriggerTime;
     
-    private int nextTriggerTime = 0;
-    
-    public TimedTrigger(int duration) {
-        Args.assertNonNegative(duration, "duration");
-        this.duration = duration;
+    public TimedTrigger() {
     }
     
-    public boolean isTriggered(int deltaTime) {
-        if (nextTriggerTime <= 0) {
-            nextTriggerTime = duration;
+    public TimedTrigger(long interval) {
+        reset(interval);
+    }
+    
+    public void reset(long interval) {
+        this.interval = interval;
+        this.nextTriggerTime = -1;
+    }
+    
+    public boolean isTriggered(long currentTime) {
+        if (nextTriggerTime < 0) {
+            nextTriggerTime = currentTime + interval;
+            return false;
         }
-        nextTriggerTime -= deltaTime;
-        return nextTriggerTime <= 0;
+        if (currentTime >= nextTriggerTime) {
+            nextTriggerTime += interval;
+            return true;
+        }
+        return false;
     }
 }

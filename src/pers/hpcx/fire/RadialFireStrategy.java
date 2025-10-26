@@ -1,4 +1,4 @@
-package pers.hpcx.shoot;
+package pers.hpcx.fire;
 
 import lombok.Value;
 import pers.hpcx.aircraft.AbstractAircraft;
@@ -9,19 +9,17 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.function.Supplier;
 
-@Value public class FanShootingStrategy<B extends BaseBullet> implements ShootingStrategy<B> {
+@Value public class RadialFireStrategy<B extends BaseBullet> implements FireStrategy<B> {
     
     int num;
     Supplier<B> supplier;
-    double angle;
-    double direction;
     double speed;
     
     @Override public List<B> shoot(AbstractAircraft shooter) {
         List<B> res = new ArrayList<>(num);
         
         for (int i = 0; i < num; i++) {
-            double theta = num == 1 ? direction : Ranges.map(i, 0, num - 1, direction - 0.5 * angle, direction + 0.5 * angle);
+            double theta = Ranges.map(i, num, Math.TAU);
             B bullet = supplier.get();
             bullet.setLocationX(shooter.getLocationX());
             bullet.setLocationY(shooter.getLocationY());

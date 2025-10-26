@@ -23,10 +23,14 @@ import java.awt.image.BufferedImage;
     protected double speedY;
     
     // 图片
-    protected BufferedImage image;
+    protected final BufferedImage image;
     
     // 生存标记，标记为 false 的对象会在下次刷新时清除
     protected boolean alive = true;
+    
+    protected AbstractFlyingObject(BufferedImage image) {
+        this.image = image;
+    }
     
     /**
      * 可飞行对象根据速度移动
@@ -38,28 +42,31 @@ import java.awt.image.BufferedImage;
             // 横向超出边界后反向
             speedX = -speedX;
         }
-        if (!getBoundingBox().intersects(Main.WINDOW_AREA)) {
-            vanish();
-        }
+    }
+    
+    public abstract void onBombExplosion();
+    
+    public boolean isInvalid() {
+        return !(isAlive() && isInScreen());
+    }
+    
+    public boolean isInScreen() {
+        return getCollisionBox().intersects(-Main.WINDOW_WIDTH, -Main.WINDOW_HEIGHT, 3 * Main.WINDOW_WIDTH, 3 * Main.WINDOW_HEIGHT);
+    }
+    
+    public double getCollisionWidth() {
+        return image.getWidth();
+    }
+    
+    public double getCollisionHeight() {
+        return image.getHeight();
+    }
+    
+    public Rectangle2D getCollisionBox() {
+        return new Rectangle2D.Double(locationX - 0.5 * getCollisionWidth(), locationY - 0.5 * getCollisionHeight(), getCollisionWidth(), getCollisionHeight());
     }
     
     public boolean crash(AbstractFlyingObject that) {
-        return getBoundingBox().intersects(that.getBoundingBox());
-    }
-    
-    public Rectangle2D getBoundingBox() {
-        return new Rectangle2D.Double(locationX - 0.5 * getWidth(), locationY - 0.5 * getHeight(), getWidth(), getHeight());
-    }
-    
-    public int getWidth() {
-        return getImage().getWidth();
-    }
-    
-    public int getHeight() {
-        return getImage().getHeight();
-    }
-    
-    public void vanish() {
-        alive = false;
+        return getCollisionBox().intersects(that.getCollisionBox());
     }
 }

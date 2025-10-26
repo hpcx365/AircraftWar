@@ -1,37 +1,44 @@
 package pers.hpcx.trigger;
 
-import pers.hpcx.util.Args;
+import lombok.Getter;
+import lombok.Setter;
 
-import java.util.concurrent.ThreadLocalRandom;
+import java.util.Random;
 
 /**
  * 随机定时触发器
  *
  * @author fengyang
  */
-public class RandomTimedTrigger {
+@Getter @Setter public class RandomTimedTrigger {
     
-    private final int minDuration;
-    private final int maxDuration;
+    private final double standardDeviation;
     
-    private int nextTriggerTime = 0;
+    private double meanInterval;
+    private long nextTriggerTime;
     
-    public RandomTimedTrigger(int minDuration, int maxDuration) {
-        Args.assertNonNegative(minDuration, "minDuration");
-        Args.assertLessOrEqual(minDuration, maxDuration, "minDuration", "maxDuration");
-        this.minDuration = minDuration;
-        this.maxDuration = maxDuration;
+    public RandomTimedTrigger(double standardDeviation) {
+        this.standardDeviation = standardDeviation;
     }
     
-    public void reset() {
-        nextTriggerTime = 0;
+    public void reset(double meanInterval) {
+        this.meanInterval = meanInterval;
+        this.nextTriggerTime = -1;
     }
     
-    public boolean isTriggered(int deltaTime) {
-        if (nextTriggerTime <= 0) {
-            nextTriggerTime = ThreadLocalRandom.current().nextInt(minDuration, maxDuration);
+    public boolean isTriggered(long currentTime, Random random) {
+        if (nextTriggerTime < 0) {
+            nextTriggerTime = currentTime + randomInterval(random);
+            return false;
         }
-        nextTriggerTime -= deltaTime;
-        return nextTriggerTime <= 0;
+        if (currentTime >= nextTriggerTime) {
+            nextTriggerTime += randomInterval(random);
+            return true;
+        }
+        return false;
+    }
+    
+    private long randomInterval(Random random) {
+        return Math.max(Math.round(random.nextGaussian(meanInterval, standardDeviation)), 0);
     }
 }

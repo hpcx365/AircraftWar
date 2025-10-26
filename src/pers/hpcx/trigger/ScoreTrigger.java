@@ -1,7 +1,5 @@
 package pers.hpcx.trigger;
 
-import pers.hpcx.util.Args;
-
 /**
  * 计分触发器
  *
@@ -9,25 +7,21 @@ import pers.hpcx.util.Args;
  */
 public class ScoreTrigger {
     
-    private final int scoresPerTrigger;
+    private int scoreGap;
+    private int nextTriggerScore;
     
-    private int nextTriggerScore = 0;
-    
-    public ScoreTrigger(int scoresPerTrigger) {
-        Args.assertNonNegative(scoresPerTrigger, "scoresPerTrigger");
-        this.scoresPerTrigger = scoresPerTrigger;
-    }
-    
-    public void reset() {
-        nextTriggerScore = 0;
+    public void reset(int scoreGap) {
+        this.scoreGap = scoreGap;
+        this.nextTriggerScore = -1;
     }
     
     public boolean isTriggered(int currentScore) {
-        if (nextTriggerScore <= 0) {
-            nextTriggerScore = scoresPerTrigger;
+        if (nextTriggerScore < 0) {
+            nextTriggerScore = currentScore + scoreGap;
+            return false;
         }
         if (currentScore >= nextTriggerScore) {
-            nextTriggerScore += scoresPerTrigger;
+            nextTriggerScore += scoreGap;
             return true;
         }
         return false;

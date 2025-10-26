@@ -1,0 +1,96 @@
+@startuml
+' 模板模式UML结构图 - 飞机大战游戏 难度控制
+
+skinparam class {
+  borderColor Black
+  borderWidth 1
+}
+
+abstract class GameTemplate {
+  + {abstract} BufferedImage background()
+  + {abstract} long rateUpdateInterval()
+  + {abstract} double enemySpawnFrequencyGrowthRate()
+  + {abstract} double enemyMaxHealthGrowthRate()
+  + {abstract} double enemyBulletPowerGrowthRate()
+  + {abstract} double enemyMaxSpeedGrowthRate()
+  + {abstract} double enemyFireFrequencyGrowthRate()
+  + {abstract} double enemyBulletSpeedGrowthRate()
+  + {abstract} long initialEnemySpawnInterval(Class<? extends AbstractAircraft> enemyType)
+  + {abstract} int initialEnemyMaxHealth(Class<? extends AbstractAircraft> enemyType)
+  + {abstract} int initialEnemyBulletPower(Class<? extends AbstractAircraft> enemyType)
+  + {abstract} double initialEnemyMaxSpeed(Class<? extends AbstractAircraft> enemyType)
+  + {abstract} long initialEnemyFireInterval(Class<? extends AbstractAircraft> enemyType)
+  + {abstract} double initialEnemyBulletSpeed(Class<? extends AbstractAircraft> enemyType)
+  + {abstract} int scoreOnEnemyDestroy(Class<? extends AbstractAircraft> enemyType)
+  + {abstract} int bossSpawnScoreGap()
+  + {abstract} int heroMaxHealth()
+  + {abstract} int heroBulletPower()
+  + {abstract} long heroFireInterval()
+  + {abstract} double heroBulletSpeed()
+  + {abstract} FireStrategy<HeroBullet> heroDefaultFireStrategy()
+  + {abstract} FireStrategy<HeroBullet> heroEnhancedFireStrategy()
+  + {abstract} FireStrategy<HeroBullet> heroSupurFireStrategy()
+  + {abstract} int numPropsOnEnemyDestroy(Class<? extends AbstractAircraft> enemyType, Random random)
+  + {abstract} BaseProp choosePropOnEnemyDestroy(Class<? extends AbstractAircraft> enemyType, Random random)
+  + {abstract} int crashEnemyDamage(Class<? extends AbstractAircraft> enemyType)
+  + {abstract} FireStrategy<EnemyBullet> enemyFireStrategy(Class<? extends AbstractAircraft> enemyType, int bulletPower, double bulletSpeed)
+}
+
+class GameEasyTemplate {
+}
+
+class GameNormalTemplate {
+}
+
+class GameHardTemplate {
+}
+
+enum Difficulty {
+  EASY
+  NORMAL
+  HARD
+  + GameTemplate newTemplate()
+}
+
+class GamePanel {
+  - GameTemplate template
+  - Difficulty difficulty
+  + void start(StartPanel startPanel)
+}
+
+' 继承关系
+GameTemplate <|-- GameEasyTemplate
+GameTemplate <|-- GameNormalTemplate
+GameTemplate <|-- GameHardTemplate
+
+' 依赖关系
+GamePanel ..> GameTemplate
+GamePanel ..> Difficulty
+
+' 使用关系
+Difficulty --> GameTemplate : creates
+
+note top of GameTemplate
+  模板方法模式
+  定义了游戏难度的算法框架
+  包含了许多钩子方法供子类实现
+end note
+
+note right of GameEasyTemplate
+  具体实现类
+  定义了具体参数
+end note
+
+note right of Difficulty
+  枚举类，封装了难度选择
+  通过工厂方法创建对应的模板实例
+end note
+
+note right of GamePanel::template
+  模板模式应用点：
+  1. 通过模板定义游戏难度算法框架
+  2. 不同难度通过子类实现具体参数
+  3. 游戏面板使用模板来控制游戏行为
+end note
+
+@enduml

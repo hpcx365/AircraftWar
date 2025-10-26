@@ -1,0 +1,119 @@
+@startuml
+' 飞机大战游戏继承关系类图
+
+' 基础飞行对象类
+abstract class AbstractFlyingObject {
+  # double locationX
+  # double locationY
+  # double speedX
+  # double speedY
+  # BufferedImage image
+  # boolean alive
+  + void forward()
+  + boolean crash(AbstractFlyingObject that)
+  + Rectangle2D getCollisionBox()
+  + double getCollisionWidth()
+  + double getCollisionHeight()
+  + boolean isInvalid()
+  + boolean isInScreen()
+  + abstract void onBombExplosion()
+}
+
+' 飞机抽象类
+abstract class AbstractAircraft {
+  # int maxHealth
+  # int health
+  # TimedTrigger fireTrigger
+  # FireStrategy fireStrategy
+  + List<? extends BaseBullet> shoot()
+  + void decreaseHp(int decrease)
+  + void increaseHp(int increase)
+}
+
+' 英雄机类
+class HeroAircraft {
+  - Set<BaseBuff> buffs
+  + void addBuff(BaseBuff buff)
+}
+
+' 敌机类
+class MobEnemy
+class EliteEnemy
+class SuperEliteEnemy
+class BossEnemy {
+  - boolean hovering
+  + List<? extends BaseBullet> shoot()
+}
+
+' 子弹基类
+abstract class BaseBullet {
+  # int power
+}
+
+' 具体子弹类
+class HeroBullet
+class EnemyBullet
+
+' 道具基类
+abstract class BaseProp {
+  + abstract void takeEffect(GamePanel gamePanel)
+}
+
+' 具体道具类
+class HealthProp {
+  + void takeEffect(GamePanel gamePanel)
+}
+class BulletProp {
+  + void takeEffect(GamePanel gamePanel)
+}
+class SuperBulletProp {
+  + void takeEffect(GamePanel gamePanel)
+}
+class BombProp {
+  + void takeEffect(GamePanel gamePanel)
+}
+
+' 继承关系
+AbstractFlyingObject <|-- AbstractAircraft
+AbstractFlyingObject <|-- BaseBullet
+AbstractFlyingObject <|-- BaseProp
+
+AbstractAircraft <|-- HeroAircraft
+AbstractAircraft <|-- MobEnemy
+AbstractAircraft <|-- EliteEnemy
+AbstractAircraft <|-- SuperEliteEnemy
+AbstractAircraft <|-- BossEnemy
+
+BaseBullet <|-- HeroBullet
+BaseBullet <|-- EnemyBullet
+
+BaseProp <|-- HealthProp
+BaseProp <|-- BulletProp
+BaseProp <|-- SuperBulletProp
+BaseProp <|-- BombProp
+
+note top of AbstractFlyingObject
+  抽象基类
+  所有可飞行对象的共同父类
+  包含位置、速度、图像等基本属性
+end note
+
+note right of AbstractAircraft
+  抽象飞机类
+  继承自AbstractFlyingObject
+  添加了生命值、射击策略等飞机特有属性
+end note
+
+note right of BaseBullet
+  子弹抽象类
+  继承自AbstractFlyingObject
+  添加了攻击力属性
+end note
+
+note right of BaseProp
+  道具抽象类
+  继承自AbstractFlyingObject
+  定义了道具生效方法
+end note
+
+@enduml

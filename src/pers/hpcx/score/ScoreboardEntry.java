@@ -8,7 +8,7 @@ import java.time.LocalDateTime;
 public record ScoreboardEntry(
     String player,
     int score,
-    int aliveTime,
+    long playTime,
     LocalDateTime recordTime
 ) implements Comparable<ScoreboardEntry>, Serializable {
     

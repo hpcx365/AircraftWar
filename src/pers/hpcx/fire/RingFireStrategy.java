@@ -1,17 +1,19 @@
-package pers.hpcx.shoot;
+package pers.hpcx.fire;
 
 import lombok.Value;
 import pers.hpcx.aircraft.AbstractAircraft;
 import pers.hpcx.bullet.BaseBullet;
+import pers.hpcx.util.Ranges;
 
 import java.util.ArrayList;
 import java.util.List;
 import java.util.function.Supplier;
 
-@Value public class StraightShootingStrategy<B extends BaseBullet> implements ShootingStrategy<B> {
+@Value public class RingFireStrategy<B extends BaseBullet> implements FireStrategy<B> {
     
     int num;
     Supplier<B> supplier;
+    double radius;
     double speedX;
     double speedY;
     
@@ -19,10 +21,10 @@ import java.util.function.Supplier;
         List<B> res = new ArrayList<>(num);
         
         for (int i = 0; i < num; i++) {
-            double x = (i - 0.5 * (num - 1)) * 20;
+            double theta = Ranges.map(i, num, Math.TAU);
             B bullet = supplier.get();
-            bullet.setLocationX(x + shooter.getLocationX());
-            bullet.setLocationY(shooter.getLocationY());
+            bullet.setLocationX(radius * Math.cos(theta) + shooter.getLocationX());
+            bullet.setLocationY(radius * Math.sin(theta) + shooter.getLocationY());
             bullet.setSpeedX(speedX + shooter.getSpeedX());
             bullet.setSpeedY(speedY + shooter.getSpeedY());
             res.add(bullet);

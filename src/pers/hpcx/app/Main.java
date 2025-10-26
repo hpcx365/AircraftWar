@@ -17,7 +17,6 @@ public class Main {
     
     public static final int WINDOW_WIDTH = 512;
     public static final int WINDOW_HEIGHT = 768;
-    public static final Rectangle WINDOW_AREA = new Rectangle(0, 0, WINDOW_WIDTH, WINDOW_HEIGHT);
     
     private static final String CARD_START = "start";
     private static final String CARD_GAME = "game";

@@ -1,6 +1,7 @@
 package pers.hpcx.aircraft;
 
 import lombok.Getter;
+import pers.hpcx.app.ResourceManager;
 import pers.hpcx.buff.BaseBuff;
 
 import java.util.HashSet;
@@ -16,7 +17,7 @@ public class HeroAircraft extends AbstractAircraft {
     @Getter private final Set<BaseBuff> buffs = new HashSet<>();
     
     public HeroAircraft(int health) {
-        super(health);
+        super(health, ResourceManager.HERO_IMAGE);
     }
     
     public void addBuff(BaseBuff buff) {
@@ -27,5 +28,8 @@ public class HeroAircraft extends AbstractAircraft {
     @Override public void forward() {
         // 英雄机由鼠标控制，不通过forward函数移动
         throw new UnsupportedOperationException();
+    }
+    
+    @Override public void onBombExplosion() {
     }
 }

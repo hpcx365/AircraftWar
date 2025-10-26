@@ -7,4 +7,7 @@ public class HeroBullet extends BaseBullet {
     public HeroBullet(int power) {
         super(power, ResourceManager.HERO_BULLET_IMAGE);
     }
+    
+    @Override public void onBombExplosion() {
+    }
 }

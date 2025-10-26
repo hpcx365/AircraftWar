@@ -3,17 +3,19 @@ package pers.hpcx.app;
 import lombok.Getter;
 import lombok.Setter;
 import pers.hpcx.aircraft.*;
-import pers.hpcx.aircraft.factory.*;
 import pers.hpcx.audio.AudioController;
 import pers.hpcx.audio.AudioPlayer;
 import pers.hpcx.audio.BufferedAudio;
 import pers.hpcx.basic.AbstractFlyingObject;
 import pers.hpcx.buff.BaseBuff;
+import pers.hpcx.buff.DefaultBulletBuff;
 import pers.hpcx.bullet.BaseBullet;
 import pers.hpcx.prop.BaseProp;
-import pers.hpcx.prop.factory.*;
+import pers.hpcx.template.Difficulty;
+import pers.hpcx.template.GameTemplate;
 import pers.hpcx.trigger.RandomTimedTrigger;
 import pers.hpcx.trigger.ScoreTrigger;
+import pers.hpcx.trigger.TimedTrigger;
 import pers.hpcx.visual.NineGrid;
 import pers.hpcx.visual.PaintUtils;
 
@@ -25,9 +27,9 @@ import java.awt.event.MouseAdapter;
 import java.awt.event.MouseEvent;
 import java.awt.image.BufferedImage;
 import java.util.ArrayList;
-import java.util.LinkedList;
 import java.util.List;
-import java.util.concurrent.ThreadLocalRandom;
+import java.util.Random;
+import java.util.function.Consumer;
 import java.util.function.Predicate;
 
 import static pers.hpcx.app.Main.WINDOW_HEIGHT;
@@ -35,52 +37,41 @@ import static pers.hpcx.app.Main.WINDOW_WIDTH;
 
 @Getter public class GamePanel extends JPanel implements ActionListener {
     
-    // 时间间隔 (ms)，控制刷新频率
-    private static final int TIME_INTERVAL = 10;
+    private static final int REPAINT_INTERVAL = 10;
+    private final Timer repaintTimer = new Timer(REPAINT_INTERVAL, this);
     
-    // 定时器，定时循环游戏帧
-    private final Timer timer = new Timer(TIME_INTERVAL, this);
-    
-    // 屏幕中出现的敌机最大数量
-    private static final int MAX_ENEMY_NUMBER = 20;
-    
-    // 背景图滚动位置
+    private long startTime;
+    private long currentTime;
+    private long playTime;
+    private int score;
+    private boolean gameOver;
+    private boolean silentMode;
     private int backGroundTop;
     
-    // 当前游戏时间 (ms)
-    private int time;
-    
-    // 当前得分
-    private int score;
-    
-    // 游戏是否结束
-    private boolean gameOver;
-    
-    // 是否静音
-    private boolean silentMode;
-    
-    // 游戏难度
     private Difficulty difficulty;
+    private GameTemplate template;
+    private final Random random = new Random();
     
-    // 普通敌机随机定时产生触发器
-    private final RandomTimedTrigger modEnemySpawnTrigger = new RandomTimedTrigger(500, 1000);
+    private double currentEnemySpawnFrequencyRate;
+    private double currentEnemyMaxHealthRate;
+    private double currentEnemyBulletPowerRate;
+    private double currentEnemyMaxSpeedRate;
+    private double currentEnemyFireFrequencyRate;
+    private double currentEnemyBulletSpeedRate;
     
-    // 精英敌机随机定时产生触发器
-    private final RandomTimedTrigger eliteEnemySpawnTrigger = new RandomTimedTrigger(6000, 10000);
-    
-    // 超级精英敌机随机定时产生触发器
-    private final RandomTimedTrigger superEliteEnemySpawnTrigger = new RandomTimedTrigger(12000, 20000);
-    
-    // Boss 敌机计分产生触发器
-    private final ScoreTrigger bossEnemySpawnTrigger = new ScoreTrigger(1000);
+    private final TimedTrigger rateUpdateTrigger = new TimedTrigger();
+    private final RandomTimedTrigger mobEnemySpawnTrigger = new RandomTimedTrigger(100);
+    private final RandomTimedTrigger eliteEnemySpawnTrigger = new RandomTimedTrigger(100);
+    private final RandomTimedTrigger superEliteEnemySpawnTrigger = new RandomTimedTrigger(100);
+    private final ScoreTrigger bossEnemySpawnTrigger = new ScoreTrigger();
     
     private final HeroController heroController = new HeroController();
     
     private HeroAircraft heroAircraft;
-    private final List<BaseBullet> heroBullets = new LinkedList<>();
-    private final List<BaseBullet> enemyBullets = new LinkedList<>();
-    private final List<AbstractAircraft> enemyAircrafts = new LinkedList<>();
-    private final List<BaseProp> props = new LinkedList<>();
+    private final List<BaseBullet> heroBullets = new ArrayList<>();
+    private final List<BaseBullet> enemyBullets = new ArrayList<>();
+    private final List<AbstractAircraft> enemyAircrafts = new ArrayList<>();
+    private final List<BaseProp> props = new ArrayList<>();
     
     private AudioPlayer audioPlayer;
     private AudioController bgmController;
@@ -94,29 +85,43 @@ import static pers.hpcx.app.Main.WINDOW_WIDTH;
      */
     public void start(StartPanel startPanel) {
         // 初始化
-        heroAircraft = new HeroAircraftFactory().create();
-        
-        backGroundTop = 0;
-        time = 0;
+        currentTime = startTime = System.currentTimeMillis();
+        playTime = 0;
         score = 0;
         gameOver = false;
+        backGroundTop = 0;
         
         difficulty = startPanel.getDifficulty();
         silentMode = startPanel.getSilentModeCheckBox().isSelected();
+        template = difficulty.newTemplate();
         
-        modEnemySpawnTrigger.reset();
-        eliteEnemySpawnTrigger.reset();
-        superEliteEnemySpawnTrigger.reset();
-        bossEnemySpawnTrigger.reset();
+        currentEnemySpawnFrequencyRate = 1;
+        currentEnemyMaxHealthRate = 1;
+        currentEnemyBulletPowerRate = 1;
+        currentEnemyMaxSpeedRate = 1;
+        currentEnemyFireFrequencyRate = 1;
+        currentEnemyBulletSpeedRate = 1;
+        
+        rateUpdateTrigger.reset(template.rateUpdateInterval());
+        mobEnemySpawnTrigger.reset(template.initialEnemySpawnInterval(MobEnemy.class));
+        eliteEnemySpawnTrigger.reset(template.initialEnemySpawnInterval(EliteEnemy.class));
+        superEliteEnemySpawnTrigger.reset(template.initialEnemySpawnInterval(SuperEliteEnemy.class));
+        bossEnemySpawnTrigger.reset(template.bossSpawnScoreGap());
         
         heroBullets.clear();
         enemyBullets.clear();
         enemyAircrafts.clear();
         props.clear();
         
+        heroAircraft = new HeroAircraft(template.heroMaxHealth());
+        heroAircraft.setLocationX(Main.WINDOW_WIDTH * 0.5);
+        heroAircraft.setLocationY(Main.WINDOW_HEIGHT - heroAircraft.getImage().getHeight());
+        heroAircraft.setFireTrigger(new TimedTrigger(template.heroFireInterval()));
+        heroAircraft.getBuffs().add(new DefaultBulletBuff());
+        
         setFocusable(true);
         heroController.install(this);
-        timer.start();
+        repaintTimer.start();
         play(ResourceManager.BACKGROUND_AUDIO);
     }
     
@@ -124,6 +129,13 @@ import static pers.hpcx.app.Main.WINDOW_WIDTH;
      * 定时任务：绘制、对象产生、碰撞判定、击毁、道具生效及结束判定
      */
     @Override public void actionPerformed(ActionEvent e) {
+        // 计时
+        currentTime = System.currentTimeMillis();
+        playTime = currentTime - startTime;
+        
+        // 倍率更新
+        updateRates();
+        
         // buff 更新
         updateBuffs();
         
@@ -154,20 +166,64 @@ import static pers.hpcx.app.Main.WINDOW_WIDTH;
         
         //每个时刻重绘界面
         repaint();
-        
-        // 计时
-        time += TIME_INTERVAL;
     }
     
     //***********************
     //      Action 各部分
     //***********************
     
+    private void updateRates() {
+        if (!rateUpdateTrigger.isTriggered(playTime)) {
+            return;
+        }
+        
+        currentEnemySpawnFrequencyRate += template.enemySpawnFrequencyGrowthRate();
+        currentEnemyMaxHealthRate += template.enemyMaxHealthGrowthRate();
+        currentEnemyBulletPowerRate += template.enemyBulletPowerGrowthRate();
+        currentEnemyMaxSpeedRate += template.enemyMaxSpeedGrowthRate();
+        currentEnemyFireFrequencyRate += template.enemyFireFrequencyGrowthRate();
+        currentEnemyBulletSpeedRate += template.enemyBulletSpeedGrowthRate();
+        
+        System.out.printf(
+            "游戏难度已更新！生成速率：%.02f，敌机血量倍率：%.02f，敌机子弹伤害倍率：%.02f，敌机最大速度倍率：%.02f，敌机射击频率倍率：%.02f，敌机子弹速度倍率：%.02f%n",
+            currentEnemySpawnFrequencyRate,
+            currentEnemyMaxHealthRate,
+            currentEnemyBulletPowerRate,
+            currentEnemyMaxSpeedRate,
+            currentEnemyFireFrequencyRate,
+            currentEnemyBulletSpeedRate
+        );
+    }
+    
+    public int currentEnemySpawnDuration(Class<? extends AbstractAircraft> enemyType) {
+        return (int) Math.round(template.initialEnemySpawnInterval(enemyType) / currentEnemySpawnFrequencyRate);
+    }
+    
+    public int currentEnemyMaxHealth(Class<? extends AbstractAircraft> enemyType) {
+        return (int) Math.round(template.initialEnemyMaxHealth(enemyType) * currentEnemyMaxHealthRate);
+    }
+    
+    public int currentEnemyBulletPower(Class<? extends AbstractAircraft> enemyType) {
+        return (int) Math.round(template.initialEnemyBulletPower(enemyType) * currentEnemyBulletPowerRate);
+    }
+    
+    public double currentEnemyMaxSpeed(Class<? extends AbstractAircraft> enemyType) {
+        return template.initialEnemyMaxSpeed(enemyType) * currentEnemyMaxSpeedRate;
+    }
+    
+    public int currentEnemyFireDuration(Class<? extends AbstractAircraft> enemyType) {
+        return (int) Math.round(template.initialEnemyFireInterval(enemyType) / currentEnemyFireFrequencyRate);
+    }
+    
+    public double currentEnemyBulletSpeed(Class<? extends AbstractAircraft> enemyType) {
+        return template.initialEnemyBulletSpeed(enemyType) * currentEnemyBulletSpeedRate;
+    }
+    
     /**
      * BUFF 更新
      */
     private void updateBuffs() {
-        heroAircraft.getBuffs().forEach(buff -> buff.update(TIME_INTERVAL, this));
+        heroAircraft.getBuffs().forEach(buff -> buff.update(REPAINT_INTERVAL, this));
         heroAircraft.getBuffs().removeIf(Predicate.not(BaseBuff::isValid));
     }
     
@@ -175,36 +231,44 @@ import static pers.hpcx.app.Main.WINDOW_WIDTH;
      * 生成敌机
      */
     private void spawnEnemy() {
-        if (enemyAircrafts.size() < MAX_ENEMY_NUMBER && modEnemySpawnTrigger.isTriggered(TIME_INTERVAL)) {
-            // 使用普通敌机工厂创建敌机
-            AircraftFactory factory = new MobEnemyFactory();
-            AbstractAircraft enemy = factory.create();
+        Consumer<AbstractAircraft> enemyInitializer = enemy -> {
+            Class<? extends AbstractAircraft> enemyType = enemy.getClass();
+            enemy.setSpeedX(0);
+            enemy.setSpeedY(random.nextDouble(0.5, 1) * currentEnemyMaxSpeed(enemyType));
+            enemy.setLocationX(random.nextDouble(enemy.getImage().getWidth() * 0.5, Main.WINDOW_WIDTH - enemy.getImage().getHeight() * 0.5));
+            enemy.setLocationY(-enemy.getImage().getHeight() * 0.5);
+            enemy.setFireTrigger(new TimedTrigger(currentEnemyFireDuration(enemyType)));
+            enemy.setFireStrategy(template.enemyFireStrategy(enemyType, currentEnemyBulletPower(enemyType), currentEnemyBulletSpeed(enemyType)));
+        };
+        
+        if (mobEnemySpawnTrigger.isTriggered(playTime, random)) {
+            MobEnemy enemy = new MobEnemy(currentEnemyMaxHealth(MobEnemy.class));
+            enemyInitializer.accept(enemy);
             enemyAircrafts.add(enemy);
         }
         
-        if (enemyAircrafts.size() < MAX_ENEMY_NUMBER && eliteEnemySpawnTrigger.isTriggered(TIME_INTERVAL)) {
-            // 使用精英敌机工厂创建敌机
-            AircraftFactory factory = new EliteEnemyFactory();
-            AbstractAircraft enemy = factory.create();
+        if (eliteEnemySpawnTrigger.isTriggered(playTime, random)) {
+            EliteEnemy enemy = new EliteEnemy(currentEnemyMaxHealth(EliteEnemy.class));
+            enemyInitializer.accept(enemy);
             enemyAircrafts.add(enemy);
         }
         
-        if (enemyAircrafts.size() < MAX_ENEMY_NUMBER && superEliteEnemySpawnTrigger.isTriggered(TIME_INTERVAL)) {
-            // 使用超级精英敌机工厂创建敌机
-            AircraftFactory factory = new SuperEliteEnemyFactory();
-            AbstractAircraft enemy = factory.create();
+        if (superEliteEnemySpawnTrigger.isTriggered(playTime, random)) {
+            SuperEliteEnemy enemy = new SuperEliteEnemy(currentEnemyMaxHealth(SuperEliteEnemy.class));
+            enemyInitializer.accept(enemy);
+            double theta = Math.toRadians(random.nextDouble(60, 120));
+            enemy.setSpeedX(Math.cos(theta) * enemy.getSpeedY());
+            enemy.setSpeedY(Math.sin(theta) * enemy.getSpeedY());
             enemyAircrafts.add(enemy);
         }
         
-        if (enemyAircrafts.size() < MAX_ENEMY_NUMBER && bossEnemySpawnTrigger.isTriggered(score)) {
-            // 场上不会出现两架 Boss
-            if (enemyAircrafts.stream().noneMatch(enemy -> enemy instanceof BossEnemy)) {
-                // 使用 Boss 敌机工厂创建敌机
-                AircraftFactory factory = new BossEnemyFactory();
-                AbstractAircraft enemy = factory.create();
-                enemyAircrafts.add(enemy);
-                play(ResourceManager.BOSS_BACKGROUND_AUDIO);
-            }
+        // 场上不会出现两架 Boss
+        if (bossEnemySpawnTrigger.isTriggered(score) && enemyAircrafts.stream().noneMatch(enemy -> enemy instanceof BossEnemy)) {
+            BossEnemy enemy = new BossEnemy(currentEnemyMaxHealth(BossEnemy.class));
+            enemyInitializer.accept(enemy);
+            enemy.setLocationX(Main.WINDOW_WIDTH * 0.5);
+            enemyAircrafts.add(enemy);
+            play(ResourceManager.BOSS_BACKGROUND_AUDIO);
         }
     }
     
@@ -213,15 +277,15 @@ import static pers.hpcx.app.Main.WINDOW_WIDTH;
      * 2. 敌机射击<br>
      */
     private void shoot() {
-        if (heroAircraft.getShootingTrigger().isTriggered(TIME_INTERVAL)) {
+        if (heroAircraft.getFireTrigger().isTriggered(playTime)) {
             heroBullets.addAll(heroAircraft.shoot());
             play(ResourceManager.BULLET_AUDIO);
         }
         
         enemyAircrafts.stream()
             .filter(AbstractFlyingObject::isAlive)
-            .filter(enemyAircraft -> enemyAircraft.getShootingTrigger() != null)
-            .filter(enemyAircraft -> enemyAircraft.getShootingTrigger().isTriggered(TIME_INTERVAL))
+            .filter(enemyAircraft -> enemyAircraft.getFireTrigger() != null)
+            .filter(enemyAircraft -> enemyAircraft.getFireTrigger().isTriggered(playTime))
             .forEach(enemyAircraft -> enemyBullets.addAll(enemyAircraft.shoot()));
     }
     
@@ -251,7 +315,7 @@ import static pers.hpcx.app.Main.WINDOW_WIDTH;
             .filter(heroAircraft::crash)
             .forEach(bullet -> {
                 // 英雄机撞击到敌机子弹损失一定生命值
-                bullet.vanish();
+                bullet.setAlive(false);
                 heroAircraft.decreaseHp(bullet.getPower());
             });
         
@@ -263,7 +327,7 @@ import static pers.hpcx.app.Main.WINDOW_WIDTH;
                 .filter(bullet::crash)
                 .forEach(enemy -> {
                     // 敌机撞击到英雄机子弹损失一定生命值
-                    bullet.vanish();
+                    bullet.setAlive(false);
                     enemy.decreaseHp(bullet.getPower());
                 })
             );
@@ -274,13 +338,8 @@ import static pers.hpcx.app.Main.WINDOW_WIDTH;
             .filter(heroAircraft::crash)
             .forEach(enemy -> {
                 // 英雄机撞击到敌机损失一定生命值
-                enemy.vanish();
-                heroAircraft.decreaseHp(switch (enemy) {
-                    case MobEnemy mobEnemy -> 50;
-                    case EliteEnemy eliteEnemy -> 200;
-                    case SuperEliteEnemy superEliteEnemy -> 500;
-                    default -> heroAircraft.getHealth();
-                });
+                enemy.setAlive(false);
+                heroAircraft.decreaseHp(template.crashEnemyDamage(enemy.getClass()));
             });
         
         // 结算摧毁敌机奖励
@@ -293,57 +352,23 @@ import static pers.hpcx.app.Main.WINDOW_WIDTH;
      * 根据敌机类型增加分数并生成道具
      */
     private void onEnemyDestroy(AbstractAircraft enemy) {
-        switch (enemy) {
-        case MobEnemy mobEnemy -> {
-            score += 10;
+        Class<? extends AbstractAircraft> enemyType = enemy.getClass();
+        score += template.scoreOnEnemyDestroy(enemyType);
+        
+        int numProps = template.numPropsOnEnemyDestroy(enemyType, random);
+        for (int i = 0; i < numProps; i++) {
+            BaseProp prop = template.choosePropOnEnemyDestroy(enemyType, random);
+            prop.setLocationX(enemy.getLocationX());
+            prop.setLocationY(enemy.getLocationY());
+            prop.setSpeedX(random.nextDouble(-3, 3));
+            prop.setSpeedY(random.nextDouble(1, 3));
+            props.add(prop);
         }
-        case EliteEnemy eliteEnemy -> {
-            score += 50;
-            spawnProp(enemy.getLocationX(), enemy.getLocationY());
-        }
-        case SuperEliteEnemy superEliteEnemy -> {
-            score += 100;
-            spawnProp(enemy.getLocationX(), enemy.getLocationY());
-        }
-        case BossEnemy bossEnemy -> {
-            score += 500;
-            int numProps = ThreadLocalRandom.current().nextInt(1, 3);
-            for (int i = 0; i < numProps; i++) {
-                spawnProp(enemy.getLocationX(), enemy.getLocationY());
-            }
+        
+        if (enemy instanceof BossEnemy) {
             play(ResourceManager.BACKGROUND_AUDIO);
         }
-        default -> {
-        }
-        }
         play(ResourceManager.BULLET_HIT_AUDIO);
-    }
-    
-    /**
-     * 生成道具
-     */
-    private void spawnProp(double locationX, double locationY) {
-        PropFactory propFactory;
-        
-        // 随机选择道具工厂
-        double rnd = ThreadLocalRandom.current().nextDouble();
-        if (rnd < 0.30) {
-            propFactory = new HealthPropFactory();
-        } else if (rnd < 0.60) {
-            propFactory = new BulletPropFactory();
-        } else if (rnd < 0.90) {
-            propFactory = new BombPropFactory();
-        } else {
-            propFactory = new SuperBulletPropFactory();
-        }
-        
-        // 使用工厂创建道具
-        BaseProp prop = propFactory.createProp();
-        prop.setLocationX(locationX);
-        prop.setLocationY(locationY);
-        prop.setSpeedX(ThreadLocalRandom.current().nextDouble(-3, 3));
-        prop.setSpeedY(ThreadLocalRandom.current().nextDouble(1, 3));
-        props.add(prop);
     }
     
     /**
@@ -355,7 +380,7 @@ import static pers.hpcx.app.Main.WINDOW_WIDTH;
             .filter(heroAircraft::crash)
             .forEach(prop -> {
                 prop.takeEffect(this);
-                prop.vanish();
+                prop.setAlive(false);
                 play(ResourceManager.GET_SUPPLY_AUDIO);
             });
     }
@@ -366,10 +391,10 @@ import static pers.hpcx.app.Main.WINDOW_WIDTH;
      * 3. 删除无效的道具<br>
      */
     private void removeInvalidObjects() {
-        heroBullets.removeIf(Predicate.not(AbstractFlyingObject::isAlive));
-        enemyBullets.removeIf(Predicate.not(AbstractFlyingObject::isAlive));
-        enemyAircrafts.removeIf(Predicate.not(AbstractFlyingObject::isAlive));
-        props.removeIf(Predicate.not(AbstractFlyingObject::isAlive));
+        heroBullets.removeIf(AbstractFlyingObject::isInvalid);
+        enemyBullets.removeIf(AbstractFlyingObject::isInvalid);
+        enemyAircrafts.removeIf(AbstractFlyingObject::isInvalid);
+        props.removeIf(AbstractFlyingObject::isInvalid);
     }
     
     /**
@@ -380,7 +405,7 @@ import static pers.hpcx.app.Main.WINDOW_WIDTH;
      */
     private void onGameOver() {
         gameOver = true;
-        timer.stop();
+        repaintTimer.stop();
         
         stopAllAudio();
         play(ResourceManager.GAME_OVER_AUDIO);
@@ -463,8 +488,8 @@ import static pers.hpcx.app.Main.WINDOW_WIDTH;
         g2d.setRenderingHints(PaintUtils.RENDERING_HINTS_BEST_QUALITY);
         
         // 绘制背景,图片滚动
-        g2d.drawImage(ResourceManager.BACKGROUND_IMAGE, 0, backGroundTop - WINDOW_HEIGHT, null);
-        g2d.drawImage(ResourceManager.BACKGROUND_IMAGE, 0, backGroundTop, null);
+        g2d.drawImage(template.background(), 0, backGroundTop - WINDOW_HEIGHT, null);
+        g2d.drawImage(template.background(), 0, backGroundTop, null);
         backGroundTop = (backGroundTop + 1) % WINDOW_HEIGHT;
         
         // 子弹显示在飞机的下层
@@ -488,7 +513,7 @@ import static pers.hpcx.app.Main.WINDOW_WIDTH;
     }
     
     private void drawUI(Graphics2D g) {
-        String timeText = "%02d:%02d:%02d".formatted(time / 1000 / 60, time / 1000 % 60, time % 1000 / 10);
+        String timeText = "%02d:%02d:%02d".formatted(playTime / 1000 / 60, playTime / 1000 % 60, playTime % 1000 / 10);
         String scoreText = "SCORE: " + score;
         String healthText = "HP: " + heroAircraft.getHealth();
         String difficultyText = difficulty.getDescription();

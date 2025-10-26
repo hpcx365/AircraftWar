@@ -3,6 +3,7 @@ package pers.hpcx.aircraft;
 import lombok.Getter;
 import lombok.Setter;
 import pers.hpcx.app.Main;
+import pers.hpcx.app.ResourceManager;
 import pers.hpcx.bullet.BaseBullet;
 
 import java.util.List;
@@ -19,7 +20,7 @@ import java.util.List;
     private boolean hovering = false;
     
     public BossEnemy(int health) {
-        super(health);
+        super(health, ResourceManager.BOSS_ENEMY_IMAGE);
     }
     
     @Override public void forward() {
@@ -34,6 +35,10 @@ import java.util.List;
             }
         }
         super.forward();
+    }
+    
+    @Override public void onBombExplosion() {
+        decreaseHp(100);
     }
     
     @Override public List<? extends BaseBullet> shoot() {

@@ -49,7 +49,7 @@ public class EndPanel extends JPanel {
         LocalDateTime now = LocalDateTime.now();
         String player = fetchUserName();
         if (player != null) {
-            scoreboard.append(new ScoreboardEntry(player, game.getScore(), game.getTime(), now));
+            scoreboard.append(new ScoreboardEntry(player, game.getScore(), game.getPlayTime(), now));
         }
         refreshTable();
     }
@@ -85,7 +85,7 @@ public class EndPanel extends JPanel {
                 i + 1,
                 entry.player(),
                 entry.score(),
-                "%02d:%02d.%03d".formatted(entry.aliveTime() / 1000 / 60, entry.aliveTime() / 1000 % 60, entry.aliveTime() % 1000),
+                "%02d:%02d.%03d".formatted(entry.playTime() / 1000 / 60, entry.playTime() / 1000 % 60, entry.playTime() % 1000),
                 formatter.format(entry.recordTime())
             });
         }

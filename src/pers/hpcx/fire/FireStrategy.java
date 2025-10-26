@@ -1,4 +1,4 @@
-package pers.hpcx.shoot;
+package pers.hpcx.fire;
 
 import pers.hpcx.aircraft.AbstractAircraft;
 import pers.hpcx.bullet.BaseBullet;
@@ -6,7 +6,7 @@ import pers.hpcx.bullet.BaseBullet;
 import java.util.List;
 
 @FunctionalInterface
-public interface ShootingStrategy<B extends BaseBullet> {
+public interface FireStrategy<B extends BaseBullet> {
     
     List<B> shoot(AbstractAircraft shooter);
 }

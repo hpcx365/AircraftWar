@@ -1,0 +1,82 @@
+@startuml
+' 观察者模式UML结构图 - 飞机大战游戏 炸弹道具
+
+skinparam class {
+  borderColor Black
+  borderWidth 1
+}
+
+class GamePanel {
+  - List<BaseBullet> enemyBullets
+  - List<AbstractAircraft> enemyAircrafts
+}
+
+abstract class BaseProp {
+  + abstract void takeEffect(GamePanel gamePanel)
+}
+
+class BombProp {
+  + void takeEffect(GamePanel gamePanel)
+}
+
+abstract class AbstractFlyingObject {
+  # boolean alive
+  + abstract void onBombExplosion()
+  + boolean isInvalid()
+}
+
+abstract class AbstractAircraft {
+}
+
+class MobEnemy
+class EliteEnemy
+class SuperEliteEnemy
+class BossEnemy
+
+abstract class BaseBullet {
+}
+
+class EnemyBullet
+
+' 继承关系
+BaseProp <|-- BombProp
+AbstractFlyingObject <|-- AbstractAircraft
+AbstractFlyingObject <|-- BaseBullet
+AbstractAircraft <|-- MobEnemy
+AbstractAircraft <|-- EliteEnemy
+AbstractAircraft <|-- SuperEliteEnemy
+AbstractAircraft <|-- BossEnemy
+BaseBullet <|-- EnemyBullet
+
+' 依赖关系
+BombProp ..> GamePanel
+GamePanel --> BombProp
+
+' 使用关系
+BombProp --> AbstractFlyingObject : affects
+
+note top of BaseProp
+  观察者模式中的主题(Subject)接口
+  定义了道具生效的方法
+end note
+
+note right of BombProp
+  具体主题(ConcreteSubject)
+  炸弹道具，影响游戏中的敌机和子弹
+  遍历所有敌机子弹和敌机
+  调用它们的onBombExplosion方法
+  实现了观察者模式的通知机制
+end note
+
+note top of AbstractFlyingObject
+  观察者(Observer)
+  所有可飞行对象都实现onBombExplosion方法
+  作为观察者响应炸弹道具的效果
+end note
+
+note right of GamePanel
+  客户端使用观察者模式
+  当炸弹道具生效时，通知所有观察者
+end note
+
+@enduml

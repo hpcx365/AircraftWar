@@ -37,6 +37,10 @@ package "道具工厂模式" {
     +BaseProp createProp()
   }
 
+  class SuperBulletFactory {
+    +BaseProp createProp()
+  }
+
   abstract class BaseProp {
     #int speedX
     #int speedY
@@ -47,7 +51,6 @@ package "道具工厂模式" {
   }
 
   class BulletProp {
-    -int numBullet
     +void takeEffect(HeroAircraft heroAircraft)
   }
   
@@ -56,7 +59,10 @@ package "道具工厂模式" {
   }
   
   class HealthProp {
-    -int health
+    +void takeEffect(HeroAircraft heroAircraft)
+  }
+
+  class SuperBulletProp {
     +void takeEffect(HeroAircraft heroAircraft)
   }
 }
@@ -65,9 +71,11 @@ package "道具工厂模式" {
 PropFactory <|-- BulletPropFactory
 PropFactory <|-- BombPropFactory
 PropFactory <|-- HealthPropFactory
+PropFactory <|-- SuperBulletFactory
 BaseProp <|-- BulletProp
 BaseProp <|-- BombProp
 BaseProp <|-- HealthProp
+BaseProp <|-- SuperBulletProp
 
 ' 使用关系
 Game ..> PropFactory
@@ -75,6 +83,7 @@ Game ..> BaseProp
 BulletPropFactory ..> BulletProp
 BombPropFactory ..> BombProp
 HealthPropFactory ..> HealthProp
+SuperBulletFactory ..> SuperBulletProp
 
 note top of PropFactory
   工厂方法模式

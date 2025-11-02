@@ -28,6 +28,14 @@ package "敌机工厂模式" {
     +AbstractAircraft createEnemy()
   }
 
+  class SuperEliteEnemyFactory {
+    +AbstractAircraft createEnemy()
+  }
+
+  class BossEnemyFactory {
+    +AbstractAircraft createEnemy();
+  }
+
   abstract class AbstractAircraft {
     #int maxHealth
     #int health
@@ -40,27 +48,35 @@ package "敌机工厂模式" {
   }
 
   class MobEnemy {
-    +List<BaseBullet> shoot()
   }
   
   class EliteEnemy {
-    -int shootNum
-    -int power
-    +List<BaseBullet> shoot()
+  }
+
+  class SuperEliteEnemy {
+  }
+
+  class BossEnemy {
   }
 }
 
 ' 继承关系
 EnemyFactory <|-- MobEnemyFactory
 EnemyFactory <|-- EliteEnemyFactory
+EnemyFactory <|-- SuperEliteEnemyFactory
+EnemyFactory <|-- BossEnemyFactory
 AbstractAircraft <|-- MobEnemy
 AbstractAircraft <|-- EliteEnemy
+AbstractAircraft <|-- SuperEliteEnemy
+AbstractAircraft <|-- BossEnemy
 
 ' 使用关系
 Game ..> EnemyFactory
 Game ..> AbstractAircraft
 MobEnemyFactory ..> MobEnemy
 EliteEnemyFactory ..> EliteEnemy
+SuperEliteEnemyFactory ..> SuperEliteEnemy
+BossEnemyFactory ..> BossEnemy
 
 note top of EnemyFactory
   工厂方法模式

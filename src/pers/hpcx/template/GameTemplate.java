@@ -57,7 +57,7 @@ public interface GameTemplate {
     }
     
     default int heroMaxHealth() {
-        return 10000;
+        return 1000;
     }
     
     default int heroBulletPower() {

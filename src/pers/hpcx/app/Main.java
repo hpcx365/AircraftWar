@@ -18,10 +18,6 @@ public class Main {
     public static final int WINDOW_WIDTH = 512;
     public static final int WINDOW_HEIGHT = 768;
     
-    private static final String CARD_START = "start";
-    private static final String CARD_GAME = "game";
-    private static final String CARD_END = "end";
-    
     public static void main(String[] args) {
         SwingUtilities.invokeLater(() -> {
             StartPanel startPanel = new StartPanel();
@@ -33,9 +29,9 @@ public class Main {
             
             CardLayout layout = new CardLayout();
             stage.setLayout(layout);
-            stage.add(startPanel, CARD_START);
-            stage.add(gamePanel, CARD_GAME);
-            stage.add(endPanel, CARD_END);
+            stage.add(startPanel, StartPanel.class.getName());
+            stage.add(gamePanel, GamePanel.class.getName());
+            stage.add(endPanel, EndPanel.class.getName());
             
             JFrame frame = new JFrame("Aircraft War");
             frame.setContentPane(stage);
@@ -46,16 +42,16 @@ public class Main {
             
             startPanel.setStartGameAction(() -> {
                 gamePanel.start(startPanel);
-                layout.show(stage, CARD_GAME);
+                layout.show(stage, GamePanel.class.getName());
             });
             
             gamePanel.setGameOverAction(() -> {
                 endPanel.refresh(gamePanel);
-                layout.show(stage, CARD_END);
+                layout.show(stage, EndPanel.class.getName());
             });
             
             endPanel.setReplayAction(() -> {
-                layout.show(stage, CARD_START);
+                layout.show(stage, StartPanel.class.getName());
             });
             
             frame.setVisible(true);
